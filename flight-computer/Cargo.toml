@@ -1,10 +1,10 @@
 [package]
-name = "ar-probe"
+name = "flight-computer"
 version = "0.1.0"
 edition = "2024"
 
 [[bin]]
-name = "ar-probe"
+name = "flight-computer"
 harness = false
 
 

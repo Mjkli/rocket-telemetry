@@ -10,6 +10,11 @@ use mpu6050::Mpu6050;
 use bmp280_ehal::{BMP280, Control, Oversampling, PowerMode};
 use shared_bus::BusManagerSimple;
 
+fn calculate_altitude(p: f64) -> f64 {
+    let center = p / 1013.25;
+    let alt = 44330.77 * (1.0 - (center.powf(0.190263)));
+    (alt * 1000.0).round() / 1000.0
+}
 
 fn main() {
     esp_idf_svc::sys::link_patches();
@@ -45,19 +50,15 @@ fn main() {
     loop {
         let accel = mpu.get_acc().unwrap();
         let gyro = mpu.get_gyro().unwrap();
-        log::info!("Accel: x={:.2} y={:.2} z={:.2}", accel.x, accel.y, accel.z);
+        log::info!("\nAccel: x={:.2} y={:.2} z={:.2}", accel.x, accel.y, accel.z);
 
 
         let pressure = bmp.pressure() / 100.0;
+        let altitude = calculate_altitude(pressure);
         let bmp_temp = bmp.temp();
-        let bmp_tempF = (bmp_temp.clone() * 1.8) + 32.0; 
-        log::info!("BMP Temp: {:.2} C\n{:.2} F,\nPressure: {:.2} hPa", bmp_temp, bmp_tempF, pressure);
-
-
+        log::info!("\nBMP Temp: {:.2} C\nAltitude: {:?} m", bmp_temp, altitude);
 
 
         FreeRtos::delay_ms(100);
-
-
     }
 }
