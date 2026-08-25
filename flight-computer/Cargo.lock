@@ -705,6 +705,7 @@ version = "0.1.0"
 dependencies = [
  "bmp280-ehal",
  "embassy-time",
+ "embedded-hal 0.2.7",
  "embuild",
  "esp-idf-hal",
  "esp-idf-svc",
