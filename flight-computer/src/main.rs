@@ -1,4 +1,6 @@
 
+use std::collections::VecDeque;
+
 use esp_idf_hal::peripherals::Peripherals;
 use esp_idf_hal::gpio::{PinDriver};
 use esp_idf_hal::delay::FreeRtos;
@@ -44,8 +46,8 @@ fn get_dist(accel: &Vec<f32>, x_old: f32, y_old: f32, z_old: f32) -> (f32, f32,f
 }
 
 
-fn get_velocity(vel_o: f32, accel: f32) -> f32 {
-    vel_o + accel * (TIME_RATE as f32 / 1000.0)
+fn get_velocity(vel_o: f32, a_old: f32, a_new: f32) -> f32 {
+    vel_o + (((a_old + a_new) / 2.0) * (TIME_RATE as f32 / 1000.0))
 }
 
 fn calibrate_accel<I, E>(mpu: &mut Mpu6050<I>, samples: usize) -> Vector3<f32>
@@ -103,15 +105,52 @@ fn main() {
     let mut vx = 0.0;
     let mut vy = 0.0;
     let mut vz = 0.0;
+    let mut ax = 0.0;
+    let mut ay = 0.0;
+    let mut az = 0.0;
+
+    const ACCEL_READING_BUFFER_LEN: usize = 5;
+    const ACCEL_THESHOLD: f32 = 0.15;
+
+    let mut accel_window: VecDeque<f32> = VecDeque::with_capacity(ACCEL_READING_BUFFER_LEN);
+
+
 
     loop {
         let raw = mpu.get_acc().unwrap();
         let corrected = raw - bias;
         let accel = g_to_mpss(corrected);
         // let gyro = mpu.get_gyro().unwrap();
-        vx = get_velocity(vx, accel[0]);
-        vy = get_velocity(vy, accel[0]);
-        vz = get_velocity(vz, accel[0]);
+        vx = get_velocity(vx, ax, accel[0]);
+        vy = get_velocity(vy, ay, accel[1]);
+        vz = get_velocity(vz, az, accel[2]);
+
+
+        let acc_mag = (accel[0].powi(2) + accel[1].powi(2) + accel[2].powi(2)).sqrt();
+        log::info!("\nACC_MAG: {:?}", acc_mag);
+        
+        if accel_window.len() >= ACCEL_READING_BUFFER_LEN {
+            accel_window.pop_front(); 
+        }
+        accel_window.push_back(acc_mag);
+        
+        let is_stationary = accel_window.len() == ACCEL_READING_BUFFER_LEN 
+                                && accel_window.iter().all(|&m| m < ACCEL_THESHOLD);
+        
+        if is_stationary {
+            vx = 0.0;
+            vy = 0.0;
+            vz = 0.0;
+            log::info!("STATIONARY!");
+        }
+
+
+
+
+        ax = accel[0];
+        ay = accel[1];
+        az = accel[2];
+        // log::info!("\nAx: {:?}\nVx: {:?}", accel[0])
         log::info!("\nAx: {:?}\n Ay: {:?}\nAz: {:?}\nVx: {:?}\nVy: {:?}\nVz: {:?}", accel[0], accel[1], accel[2], vx, vy, vz);
         // log::info!("\nVx = {:?}\nVy = {:?}\n Vz = {:?}", vx,vy,vz);
 
