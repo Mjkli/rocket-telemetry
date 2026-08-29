@@ -117,6 +117,12 @@ fn main() {
 
 
     loop {
+        let raw_gyro = mpu.get_gyro().unwrap();
+        
+        
+        log::info!("\nGyro: {:?}", raw_gyro);
+        
+        
         let raw = mpu.get_acc().unwrap();
         let corrected = raw - bias;
         let accel = g_to_mpss(corrected);
@@ -127,7 +133,7 @@ fn main() {
 
 
         let acc_mag = (accel[0].powi(2) + accel[1].powi(2) + accel[2].powi(2)).sqrt();
-        log::info!("\nACC_MAG: {:?}", acc_mag);
+        // log::info!("\nACC_MAG: {:?}", acc_mag);
         
         if accel_window.len() >= ACCEL_READING_BUFFER_LEN {
             accel_window.pop_front(); 
@@ -151,8 +157,12 @@ fn main() {
         ay = accel[1];
         az = accel[2];
         // log::info!("\nAx: {:?}\nVx: {:?}", accel[0])
-        log::info!("\nAx: {:?}\n Ay: {:?}\nAz: {:?}\nVx: {:?}\nVy: {:?}\nVz: {:?}", accel[0], accel[1], accel[2], vx, vy, vz);
+        // log::info!("\nAx: {:?}\n Ay: {:?}\nAz: {:?}\nVx: {:?}\nVy: {:?}\nVz: {:?}", accel[0], accel[1], accel[2], vx, vy, vz);
         // log::info!("\nVx = {:?}\nVy = {:?}\n Vz = {:?}", vx,vy,vz);
+
+
+
+
 
         let pressure = bmp.pressure() / 100.0;
         let altitude = calculate_altitude(pressure);

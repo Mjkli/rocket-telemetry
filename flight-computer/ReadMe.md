@@ -72,3 +72,11 @@ Not implemented yet:
 - `build.rs` - ESP-IDF build integration
 - `Cargo.toml` - Rust dependencies and ESP-IDF configuration
 - `rust-toolchain.toml` - ESP Rust toolchain selection
+
+
+
+### Notes
+08/28/26
+    Right now i am at a point that I can get calibrated data from the mpu6050. 
+    But Right now I think I need to create a kalman filter so that i can get orientaiton data.
+    After I have orientation data. Then I can calculate Traversal distances appx. 
