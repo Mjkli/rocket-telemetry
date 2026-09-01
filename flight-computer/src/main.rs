@@ -98,14 +98,14 @@ fn main() {
 
     loop {
         let raw_gyro = mpu.get_gyro().unwrap(); 
-        // log::info!("\nGyro: {:?}", raw_gyro);
+        log::info!("\nGyro: {:?}", raw_gyro);
         
         
         let raw = mpu.get_acc().unwrap();
         let roll = get_roll_angle(raw);
         let pitch = get_pitch_angle(raw);
         // log::info!("\nAccel: {:?}", raw);
-        log::info!("\nRoll: {:.2} deg\nPitch: {:.2} deg", roll, pitch);
+        // log::info!("\nRoll: {:.2} deg\nPitch: {:.2} deg", roll, pitch);
 
         let pressure = bmp.pressure() / 100.0;
         let altitude = calculate_altitude(pressure);
