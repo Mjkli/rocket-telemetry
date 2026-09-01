@@ -14,7 +14,7 @@ use embedded_hal::blocking::i2c::{Write, WriteRead};
 use shared_bus::BusManagerSimple;
 
 use nalgebra::{Vector3};
-
+use libm::{atan2, sqrt};
 
 const TIME_RATE: u32 = 100;
 
@@ -34,6 +34,15 @@ fn g_to_mpss(acc_vec: Vector3<f32>) -> Vec<f32> {
     
     mpss_vec
 }
+
+fn get_roll_angle(acc_vec: Vector3<f32>) -> f64 {
+    atan2(acc_vec.y as f64, sqrt((acc_vec.x as f64).powi(2) + (acc_vec.z as f64).powi(2))).to_degrees()
+}
+
+fn get_pitch_angle(acc_vec: Vector3<f32>) -> f64 {
+    atan2(-acc_vec.x as f64, sqrt((acc_vec.y as f64).powi(2) + (acc_vec.z as f64).powi(2))).to_degrees()
+}
+
 
 fn calibrate_accel<I, E>(mpu: &mut Mpu6050<I>, samples: usize) -> Vector3<f32>
 where
@@ -89,15 +98,15 @@ fn main() {
 
     loop {
         let raw_gyro = mpu.get_gyro().unwrap(); 
-        log::info!("\nGyro: {:?}", raw_gyro);
+        // log::info!("\nGyro: {:?}", raw_gyro);
         
         
         let raw = mpu.get_acc().unwrap();
-        let corrected = raw - bias;
-        let accel = g_to_mpss(corrected);
+        let roll = get_roll_angle(raw);
+        let pitch = get_pitch_angle(raw);
+        // log::info!("\nAccel: {:?}", raw);
+        log::info!("\nRoll: {:.2} deg\nPitch: {:.2} deg", roll, pitch);
 
-
-        
         let pressure = bmp.pressure() / 100.0;
         let altitude = calculate_altitude(pressure);
         let bmp_temp = bmp.temp();

@@ -18,6 +18,7 @@ mpu6050 = "0.1.6"
 shared-bus = "0.3.1"
 bmp280-ehal = "0.0.6"
 nalgebra = "0.31.4"
+libm = "0.2.16"
 
 [build-dependencies]
 embuild = "0.33"
