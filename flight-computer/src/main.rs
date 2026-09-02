@@ -59,6 +59,23 @@ where
     Vector3::new(avg.x, avg.y, avg.z)
 }
 
+fn calibrate_gyro<I, E>(mpu: &mut Mpu6050<I>, samples: usize) -> Vector3<f32>
+where
+    I: Write<Error = E> + WriteRead<Error = E>,
+    E: core::fmt::Debug,
+{
+    let mut sum = Vector3::new(0.0f32, 0.0, 0.0);
+    for _ in 0..samples {
+        let g = mpu.get_gyro().unwrap();
+        sum += g;
+        FreeRtos::delay_ms(10);
+    }
+    let avg = sum / samples as f32;
+    Vector3::new(avg.x, avg.y, avg.z)
+}
+
+
+
 fn main() {
     esp_idf_svc::sys::link_patches();
     esp_idf_svc::log::EspLogger::initialize_default();
@@ -81,8 +98,10 @@ fn main() {
     let mut mpu = Mpu6050::new(bus.acquire_i2c());
     mpu.init(&mut FreeRtos).unwrap();
     log::info!("Calibrating, keep sensor still...");
-    let bias = calibrate_accel(&mut mpu, 2000); // ~2 seconds at 10ms delay
-    log::info!("Bias: {:?}", bias);
+    let acc_bias = calibrate_accel(&mut mpu, 2000); // ~2 seconds at 10ms delay
+    let gyro_bias = calibrate_gyro(&mut mpu, 2000); // ~2 seconds at 10ms delay
+
+
     red_led.set_low().unwrap();
     green_led.set_high().unwrap();
 
@@ -96,16 +115,33 @@ fn main() {
         mode: PowerMode::Normal,
     });
 
+    let mut gyro_x_sum: f32 = 0.0;
+    let mut gyro_y_sum: f32 = 0.0;
+    let mut gyro_z_sum: f32 = 0.0;
+
     loop {
-        let raw_gyro = mpu.get_gyro().unwrap(); 
-        log::info!("\nGyro: {:?}", raw_gyro);
-        
-        
+        let raw_gyro = mpu.get_gyro().unwrap();
+        let corrected_gyro = Vector3::new(
+            raw_gyro.x - gyro_bias.x,
+            raw_gyro.y - gyro_bias.y,
+            raw_gyro.z - gyro_bias.z,
+        );
+
+        gyro_x_sum += corrected_gyro.x;
+        gyro_y_sum += corrected_gyro.y;
+        gyro_z_sum += corrected_gyro.z;
+        log::info!("\nGyro Sum: x: {:.2}, y: {:.2}, z: {:.2}", gyro_x_sum, gyro_y_sum, gyro_z_sum);
+
+
         let raw = mpu.get_acc().unwrap();
+        let corrected_acc = Vector3::new(
+            raw.x - acc_bias.x,
+            raw.y - acc_bias.y,
+            raw.z - acc_bias.z,
+        );
         let roll = get_roll_angle(raw);
         let pitch = get_pitch_angle(raw);
-        // log::info!("\nAccel: {:?}", raw);
-        // log::info!("\nRoll: {:.2} deg\nPitch: {:.2} deg", roll, pitch);
+        // log::info!("\nRoll_1: {:.2} deg -- Pitch_1: {:.2} deg", roll, pitch);
 
         let pressure = bmp.pressure() / 100.0;
         let altitude = calculate_altitude(pressure);
