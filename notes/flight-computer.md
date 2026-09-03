@@ -20,3 +20,6 @@ Except right now a 90deg rotation on x / y axis only goes to 15. Need to see how
 I get even stranger numbers where a 90deg rotation can get to 800
 
 # 09-02-2026
+Okay, Was able to figure out how to get the proper degrees from the gyro. I was pretty close!
+Now I can see both Pitch / Roll from both gyro and accelerometer. Now I can use a Kalman filter to get
+a better appx. To the change

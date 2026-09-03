@@ -132,23 +132,20 @@ fn main() {
         gyro_x_sum += corrected_gyro.x * dt;
         gyro_y_sum += corrected_gyro.y * dt;
         gyro_z_sum += corrected_gyro.z * dt;
-        log::info!("\nGyro Sum: x: {:.2}, y: {:.2}, z: {:.2}", gyro_x_sum.to_degrees(), gyro_y_sum.to_degrees(), gyro_z_sum.to_degrees());
 
 
         let raw = mpu.get_acc().unwrap();
         let corrected_acc = Vector3::new(
             raw.x - acc_bias.x,
             raw.y - acc_bias.y,
-            raw.z - acc_bias.z,
         );
         let roll = get_roll_angle(raw);
         let pitch = get_pitch_angle(raw);
-        // log::info!("\nRoll_1: {:.2} deg -- Pitch_1: {:.2} deg", roll, pitch);
+        log::info!("\nRoll_1: {:.2} deg -- Pitch_1: {:.2} deg", roll, pitch);
 
         let pressure = bmp.pressure() / 100.0;
         let altitude = calculate_altitude(pressure);
         let bmp_temp = bmp.temp();
-        // log::info!("\nBMP Temp: {:.2} C\nAltitude: {:?} m", bmp_temp, altitude);
 
         FreeRtos::delay_ms(TIME_RATE);
     }
