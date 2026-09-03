@@ -53,7 +53,7 @@ where
     for _ in 0..samples {
         let a = mpu.get_acc().unwrap();
         sum += a;
-        FreeRtos::delay_ms(10);
+        FreeRtos::delay_ms(1);
     }
     let avg = sum / samples as f32;
     Vector3::new(avg.x, avg.y, avg.z)
@@ -68,7 +68,7 @@ where
     for _ in 0..samples {
         let g = mpu.get_gyro().unwrap();
         sum += g;
-        FreeRtos::delay_ms(10);
+        FreeRtos::delay_ms(1);
     }
     let avg = sum / samples as f32;
     Vector3::new(avg.x, avg.y, avg.z)
@@ -98,8 +98,8 @@ fn main() {
     let mut mpu = Mpu6050::new(bus.acquire_i2c());
     mpu.init(&mut FreeRtos).unwrap();
     log::info!("Calibrating, keep sensor still...");
-    let acc_bias = calibrate_accel(&mut mpu, 2000); // ~2 seconds at 10ms delay
-    let gyro_bias = calibrate_gyro(&mut mpu, 2000); // ~2 seconds at 10ms delay
+    let acc_bias = calibrate_accel(&mut mpu, 2000); // ~2 seconds at 1ms delay
+    let gyro_bias = calibrate_gyro(&mut mpu, 2000); // ~2 seconds at 1ms delay
 
 
     red_led.set_low().unwrap();
@@ -127,10 +127,12 @@ fn main() {
             raw_gyro.z - gyro_bias.z,
         );
 
-        gyro_x_sum += corrected_gyro.x;
-        gyro_y_sum += corrected_gyro.y;
-        gyro_z_sum += corrected_gyro.z;
-        log::info!("\nGyro Sum: x: {:.2}, y: {:.2}, z: {:.2}", gyro_x_sum, gyro_y_sum, gyro_z_sum);
+        let dt = TIME_RATE as f32 / 1000.0;
+
+        gyro_x_sum += corrected_gyro.x * dt;
+        gyro_y_sum += corrected_gyro.y * dt;
+        gyro_z_sum += corrected_gyro.z * dt;
+        log::info!("\nGyro Sum: x: {:.2}, y: {:.2}, z: {:.2}", gyro_x_sum.to_degrees(), gyro_y_sum.to_degrees(), gyro_z_sum.to_degrees());
 
 
         let raw = mpu.get_acc().unwrap();

@@ -18,3 +18,5 @@ Later in the day:
 Got the gyro calibrated and working properly now. Can almost get orientation from it by calculating the sum of the changes.
 Except right now a 90deg rotation on x / y axis only goes to 15. Need to see how to convert the rad/s to deg/s properly as when i just multiply by 57.295779513082
 I get even stranger numbers where a 90deg rotation can get to 800
+
+# 09-02-2026
