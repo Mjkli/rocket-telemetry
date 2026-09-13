@@ -1,5 +1,6 @@
 
 use std::collections::VecDeque;
+use std::time::Instant;
 
 use esp_idf_hal::peripherals::Peripherals;
 use esp_idf_hal::gpio::{PinDriver};
@@ -115,6 +116,7 @@ fn main() {
     });
 
     let mut gyro_sum: Vector3<f32> = Vector3::new(0.0, 0.0, 0.0);
+    let mut previous = Instant::now();
 
     loop {
         let raw_gyro = mpu.get_gyro().unwrap();
@@ -123,8 +125,10 @@ fn main() {
             raw_gyro.y - gyro_bias.y,
             raw_gyro.z - gyro_bias.z,
         );
-
-        let dt = TIME_RATE as f32 / 1000.0;
+        
+        let now = Instant::now();
+        let dt = (now - previous).as_secs_f32();
+        previous = now;
 
         gyro_sum.x += corrected_gyro.x * dt;
         gyro_sum.y += corrected_gyro.y * dt;
@@ -133,13 +137,17 @@ fn main() {
         let roll_gyro = gyro_sum.x.to_degrees();
         let pitch_gyro = gyro_sum.y.to_degrees();
         let yaw_gyro = gyro_sum.z.to_degrees();
-        log::info!("\nRoll_gyro: {:.2} deg -- Pitch_gyro: {:.2} deg -- Yaw_gyro: {:.2} deg", roll_gyro, pitch_gyro, yaw_gyro);
+        log::info!("Gyro angles: Roll: {:.2}, Pitch: {:.2}, Yaw: {:.2}", roll_gyro, pitch_gyro, yaw_gyro);
 
 
         let raw = mpu.get_acc().unwrap();
         let roll = get_roll_angle(raw);
         let pitch = get_pitch_angle(raw);
-        // log::info!("\nRoll_1: {:.2} deg -- Pitch_1: {:.2} deg", roll, pitch);
+
+
+
+        // Kalman filter
+
 
     
         let pressure = bmp.pressure() / 100.0;
