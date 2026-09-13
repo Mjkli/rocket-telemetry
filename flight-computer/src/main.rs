@@ -98,7 +98,6 @@ fn main() {
     let mut mpu = Mpu6050::new(bus.acquire_i2c());
     mpu.init(&mut FreeRtos).unwrap();
     log::info!("Calibrating, keep sensor still...");
-    let acc_bias = calibrate_accel(&mut mpu, 2000); // ~2 seconds at 1ms delay
     let gyro_bias = calibrate_gyro(&mut mpu, 2000); // ~2 seconds at 1ms delay
 
 
@@ -115,9 +114,7 @@ fn main() {
         mode: PowerMode::Normal,
     });
 
-    let mut gyro_x_sum: f32 = 0.0;
-    let mut gyro_y_sum: f32 = 0.0;
-    let mut gyro_z_sum: f32 = 0.0;
+    let mut gyro_sum: Vector3<f32> = Vector3::new(0.0, 0.0, 0.0);
 
     loop {
         let raw_gyro = mpu.get_gyro().unwrap();
@@ -129,20 +126,22 @@ fn main() {
 
         let dt = TIME_RATE as f32 / 1000.0;
 
-        gyro_x_sum += corrected_gyro.x * dt;
-        gyro_y_sum += corrected_gyro.y * dt;
-        gyro_z_sum += corrected_gyro.z * dt;
+        gyro_sum.x += corrected_gyro.x * dt;
+        gyro_sum.y += corrected_gyro.y * dt;
+        gyro_sum.z += corrected_gyro.z * dt;
+        
+        let roll_gyro = gyro_sum.x.to_degrees();
+        let pitch_gyro = gyro_sum.y.to_degrees();
+        let yaw_gyro = gyro_sum.z.to_degrees();
+        log::info!("\nRoll_gyro: {:.2} deg -- Pitch_gyro: {:.2} deg -- Yaw_gyro: {:.2} deg", roll_gyro, pitch_gyro, yaw_gyro);
 
 
         let raw = mpu.get_acc().unwrap();
-        let corrected_acc = Vector3::new(
-            raw.x - acc_bias.x,
-            raw.y - acc_bias.y,
-        );
         let roll = get_roll_angle(raw);
         let pitch = get_pitch_angle(raw);
-        log::info!("\nRoll_1: {:.2} deg -- Pitch_1: {:.2} deg", roll, pitch);
+        // log::info!("\nRoll_1: {:.2} deg -- Pitch_1: {:.2} deg", roll, pitch);
 
+    
         let pressure = bmp.pressure() / 100.0;
         let altitude = calculate_altitude(pressure);
         let bmp_temp = bmp.temp();
