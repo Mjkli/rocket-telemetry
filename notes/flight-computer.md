@@ -22,4 +22,7 @@ I get even stranger numbers where a 90deg rotation can get to 800
 # 09-02-2026
 Okay, Was able to figure out how to get the proper degrees from the gyro. I was pretty close!
 Now I can see both Pitch / Roll from both gyro and accelerometer. Now I can use a Kalman filter to get
-a better appx. To the change
+a better appx.
+
+# 09-13-2026
+Starting on the Kalman filter now for orientation. Had to swap the mean bias for the gyro to varience calculation.

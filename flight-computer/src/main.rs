@@ -26,55 +26,95 @@ fn calculate_altitude(p: f64) -> f64 {
     (alt * 1000.0).round() / 1000.0
 }
 
-
-fn g_to_mpss(acc_vec: Vector3<f32>) -> Vec<f32> {
-    let mut mpss_vec: Vec<f32> = Vec::new();
-    mpss_vec.push(acc_vec.x * 9.80665);
-    mpss_vec.push(acc_vec.y * 9.80665);
-    mpss_vec.push(acc_vec.z * 9.80665);
-    
-    mpss_vec
-}
-
 fn get_roll_angle(acc_vec: Vector3<f32>) -> f64 {
-    atan2(acc_vec.y as f64, sqrt((acc_vec.x as f64).powi(2) + (acc_vec.z as f64).powi(2))).to_degrees()
+    atan2(acc_vec.y as f64, sqrt((acc_vec.x as f64).powi(2) + (acc_vec.z as f64).powi(2)))
 }
 
 fn get_pitch_angle(acc_vec: Vector3<f32>) -> f64 {
-    atan2(-acc_vec.x as f64, sqrt((acc_vec.y as f64).powi(2) + (acc_vec.z as f64).powi(2))).to_degrees()
+    atan2(-acc_vec.x as f64, sqrt((acc_vec.y as f64).powi(2) + (acc_vec.z as f64).powi(2)))
 }
 
 
-fn calibrate_accel<I, E>(mpu: &mut Mpu6050<I>, samples: usize) -> Vector3<f32>
+fn calibrate_accel<I, E>(mpu: &mut Mpu6050<I>, samples: usize) -> (Vector3<f32>, Vector3<f32>)
 where
     I: Write<Error = E> + WriteRead<Error = E>,
     E: core::fmt::Debug,
 {
     let mut sum = Vector3::new(0.0f32, 0.0, 0.0);
+    let mut sample_data: Vec<Vector3<f32>> = Vec::with_capacity(samples);
+    let mut variance_sum = Vector3::new(0.0f32, 0.0, 0.0);
     for _ in 0..samples {
         let a = mpu.get_acc().unwrap();
+        sample_data.push(a);
         sum += a;
         FreeRtos::delay_ms(1);
     }
-    let avg = sum / samples as f32;
-    Vector3::new(avg.x, avg.y, avg.z)
+    let mean = sum / samples as f32;
+
+    let var_sum = sample_data.iter().fold(Vector3::new(0.0f32, 0.0, 0.0), |acc, &sample| {
+        let diff = sample - mean;
+        acc + Vector3::new(diff.x.powi(2), diff.y.powi(2), diff.z.powi(2))
+    });
+
+   ( mean, var_sum / (samples - 1) as f32)
+
 }
 
-fn calibrate_gyro<I, E>(mpu: &mut Mpu6050<I>, samples: usize) -> Vector3<f32>
+fn calibrate_accel_angles<I, E>(mpu: &mut Mpu6050<I>, samples: usize) -> (f64, f64)
+where
+    I: Write<Error = E> + WriteRead<Error = E>,
+    E: core::fmt::Debug,
+{
+    let mut roll_samples = Vec::with_capacity(samples);
+    let mut pitch_samples = Vec::with_capacity(samples);
+
+    for _ in 0..samples {
+        let a = mpu.get_acc().unwrap();
+        roll_samples.push(get_roll_angle(a));
+        pitch_samples.push(get_pitch_angle(a));
+        FreeRtos::delay_ms(1);
+    }
+    let roll_mean = roll_samples.iter().sum::<f64>() / samples as f64;
+    let pitch_mean = pitch_samples.iter().sum::<f64>() / samples as f64;
+
+    let roll_variance = roll_samples
+        .iter()
+        .map(|&x| (x - roll_mean).powi(2))
+        .sum::<f64>()
+        / (samples - 1) as f64;
+    
+    let pitch_variance = pitch_samples
+        .iter()
+        .map(|&x| (x - pitch_mean).powi(2))
+        .sum::<f64>()
+        / (samples - 1) as f64;
+
+    (roll_variance, pitch_variance)
+}
+
+fn calibrate_gyro<I, E>(mpu: &mut Mpu6050<I>, samples: usize) -> (Vector3<f32>, Vector3<f32>)
 where
     I: Write<Error = E> + WriteRead<Error = E>,
     E: core::fmt::Debug,
 {
     let mut sum = Vector3::new(0.0f32, 0.0, 0.0);
+    let mut sample_data: Vec<Vector3<f32>> = Vec::with_capacity(samples);
+    let mut variance_sum = Vector3::new(0.0f32, 0.0, 0.0);
     for _ in 0..samples {
-        let g = mpu.get_gyro().unwrap();
-        sum += g;
+        let a = mpu.get_gyro().unwrap();
+        sample_data.push(a);
+        sum += a;
         FreeRtos::delay_ms(1);
     }
-    let avg = sum / samples as f32;
-    Vector3::new(avg.x, avg.y, avg.z)
-}
+    let mean = sum / samples as f32;
 
+    let var_sum = sample_data.iter().fold(Vector3::new(0.0f32, 0.0, 0.0), |acc, &sample| {
+        let diff = sample - mean;
+        acc + Vector3::new(diff.x.powi(2), diff.y.powi(2), diff.z.powi(2))
+    });
+
+    (mean, var_sum / (samples - 1) as f32)
+}
 
 
 fn main() {
@@ -99,7 +139,9 @@ fn main() {
     let mut mpu = Mpu6050::new(bus.acquire_i2c());
     mpu.init(&mut FreeRtos).unwrap();
     log::info!("Calibrating, keep sensor still...");
-    let gyro_bias = calibrate_gyro(&mut mpu, 2000); // ~2 seconds at 1ms delay
+    let (gyro_bias, gyro_v) = calibrate_gyro(&mut mpu, 2000); // ~2 seconds at 1ms delay
+    let (accel_bias, accel_v) = calibrate_accel(&mut mpu, 2000); // ~2 seconds at 1ms delay
+    let (R_roll, R_pitch) = calibrate_accel_angles(&mut mpu, 2000); // ~2 seconds at 1ms delay
 
 
     red_led.set_low().unwrap();
@@ -115,8 +157,15 @@ fn main() {
         mode: PowerMode::Normal,
     });
 
-    let mut gyro_sum: Vector3<f32> = Vector3::new(0.0, 0.0, 0.0);
     let mut previous = Instant::now();
+
+    // Kalman filter state
+    let mut roll_angle = 0.0f64;
+    let mut pitch_angle = 0.0f64;
+    
+    let mut P_roll = 1.0f64; // our sensor uncertainty
+    let mut P_pitch = 1.0f64;
+    let Q_gyro = gyro_v; // sensor variance
 
     loop {
         let raw_gyro = mpu.get_gyro().unwrap();
@@ -125,19 +174,21 @@ fn main() {
             raw_gyro.y - gyro_bias.y,
             raw_gyro.z - gyro_bias.z,
         );
+
         
         let now = Instant::now();
         let dt = (now - previous).as_secs_f32();
         previous = now;
 
-        gyro_sum.x += corrected_gyro.x * dt;
-        gyro_sum.y += corrected_gyro.y * dt;
-        gyro_sum.z += corrected_gyro.z * dt;
-        
-        let roll_gyro = gyro_sum.x.to_degrees();
-        let pitch_gyro = gyro_sum.y.to_degrees();
-        let yaw_gyro = gyro_sum.z.to_degrees();
-        log::info!("Gyro angles: Roll: {:.2}, Pitch: {:.2}, Yaw: {:.2}", roll_gyro, pitch_gyro, yaw_gyro);
+        // Predicted Angles
+        roll_angle += (corrected_gyro.x as f64) * (dt as f64);
+        pitch_angle += (corrected_gyro.y as f64) * (dt as f64);
+
+        // Update the uncertainty
+        P_roll += (Q_gyro.x as f64) * (dt as f64).powi(2);
+        P_pitch += (Q_gyro.y as f64) * (dt as f64).powi(2);
+
+
 
 
         let raw = mpu.get_acc().unwrap();
@@ -145,9 +196,18 @@ fn main() {
         let pitch = get_pitch_angle(raw);
 
 
+        // Measurement Update
 
-        // Kalman filter
+        let K_roll = P_roll / (P_roll + R_roll);
+        let K_pitch = P_pitch / (P_pitch + R_pitch);
+        roll_angle += K_roll * (roll - roll_angle);
+        pitch_angle += K_pitch * (pitch - pitch_angle);
 
+        log::info!("Roll: {:.2}, Pitch: {:.2}", roll_angle.to_degrees(), pitch_angle.to_degrees());
+
+
+        P_roll = (1.0 - K_roll) * P_roll;
+        P_pitch = (1.0 - K_pitch) * P_pitch;
 
     
         let pressure = bmp.pressure() / 100.0;
