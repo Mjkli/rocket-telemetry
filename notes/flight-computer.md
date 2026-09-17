@@ -26,3 +26,10 @@ a better appx.
 
 # 09-13-2026
 Starting on the Kalman filter now for orientation. Had to swap the mean bias for the gyro to varience calculation.
+
+# 09-15-2026
+Okay got the Kalman filter implemented, crudely... But will take it now. Will probably clean it up later,
+If i stare at it for a bit. I think now I can start creating the protocol and start connecting to the ground station.
+
+# 09-17-2026
+Taking a look at the mpu6050 docs from the lib i am using. There is a get_acc_angels function. I tested this against the calculated kalman filter and found that it was more noisy. I am confident that using the kalman filter angles are better.

@@ -117,6 +117,14 @@ where
 }
 
 
+struct SensorData {
+    roll: f64,
+    pitch: f64,
+    altitude: f64,
+    temperature: f64,
+}
+
+
 fn main() {
     esp_idf_svc::sys::link_patches();
     esp_idf_svc::log::EspLogger::initialize_default();
@@ -188,22 +196,16 @@ fn main() {
         P_roll += (Q_gyro.x as f64) * (dt as f64).powi(2);
         P_pitch += (Q_gyro.y as f64) * (dt as f64).powi(2);
 
-
-
-
         let raw = mpu.get_acc().unwrap();
         let roll = get_roll_angle(raw);
         let pitch = get_pitch_angle(raw);
 
 
         // Measurement Update
-
         let K_roll = P_roll / (P_roll + R_roll);
         let K_pitch = P_pitch / (P_pitch + R_pitch);
         roll_angle += K_roll * (roll - roll_angle);
         pitch_angle += K_pitch * (pitch - pitch_angle);
-
-        log::info!("Roll: {:.2}, Pitch: {:.2}", roll_angle.to_degrees(), pitch_angle.to_degrees());
 
 
         P_roll = (1.0 - K_roll) * P_roll;
@@ -213,6 +215,21 @@ fn main() {
         let pressure = bmp.pressure() / 100.0;
         let altitude = calculate_altitude(pressure);
         let bmp_temp = bmp.temp();
+
+
+
+
+
+
+        // Log the data
+        let sensor_data = SensorData {
+            roll: roll_angle.to_degrees(),
+            pitch: pitch_angle.to_degrees(),
+            altitude,
+            temperature: bmp_temp,
+        };
+        // log::info!("Roll: {:.2}, Pitch: {:.2}, Altitude: {:.2} m, Temperature: {:.2} °C", sensor_data.roll, sensor_data.pitch, sensor_data.altitude, sensor_data.temperature);
+
 
         FreeRtos::delay_ms(TIME_RATE);
     }
