@@ -33,3 +33,7 @@ If i stare at it for a bit. I think now I can start creating the protocol and st
 
 # 09-17-2026
 Taking a look at the mpu6050 docs from the lib i am using. There is a get_acc_angels function. I tested this against the calculated kalman filter and found that it was more noisy. I am confident that using the kalman filter angles are better.
+
+# 09-23-2026
+Starting to figure out how to connect the RF module ( DX-LR32 ). Need to figure out how to setup both sides.
+Also starting to think about the ground station. Right now with the outline of the project, It may not be neccesery for me to have a ground station. Although I think if we keep the ground station, the architecture with the ground station will allow multiple clients. not just the tauri app will connect. 
