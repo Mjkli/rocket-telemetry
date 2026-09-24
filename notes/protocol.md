@@ -8,3 +8,11 @@ To find the end of the packet from a continuous stream, you set a "header" block
 Pretty smart. 
 Hooked up this method to the flight computer TelemtryData struct currently.
 I think I would like to add an e2e validation also. So I can track if I had a packet get lost. 
+
+# 09-24-2026
+Okay today I think I want to add the e2e validation by adding a counter to the end of the encoding.
+So the packet should look something like this:
+[counter][cobs header][data][crc, crc]
+[u8, u8][cobs header of pointers][packet data][u8,u8]
+Okay counter added to packet to be used when decoding. 
+This is useful to detect packet drop-out / packet misordering

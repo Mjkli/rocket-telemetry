@@ -37,3 +37,4 @@ Taking a look at the mpu6050 docs from the lib i am using. There is a get_acc_an
 # 09-23-2026
 Starting to figure out how to connect the RF module ( DX-LR32 ). Need to figure out how to setup both sides.
 Got the RF module working! That should be it for the inital part of the flight computer. Just need to structure the data properly to be sent over!
+Connected the encoding, Flight computer will send structured data over the RF now.

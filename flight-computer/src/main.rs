@@ -183,6 +183,8 @@ fn main() {
     let mut P_pitch = 1.0f64;
     let Q_gyro = gyro_v; // sensor variance
 
+    let mut packet_count: u16 = 1;
+
     loop {
         let raw_gyro = mpu.get_gyro().unwrap();
         let corrected_gyro = Vector3::new(
@@ -231,10 +233,11 @@ fn main() {
             pitch: pitch_angle.to_degrees(),
             altitude,
             temperature: bmp_temp,
-            flight_state: FlightState::Preflight,
+            flight_state: FlightState::Preflight, // Staying in Preflight for now, will implement state machine later
         };
 
-        let encoded_data = protocol::encode(&sensor_data).unwrap();
+        let encoded_data = protocol::encode(&sensor_data, packet_count).unwrap();
+        packet_count += 1;
         uart.write(&encoded_data).unwrap();
 
         FreeRtos::delay_ms(TIME_RATE);
