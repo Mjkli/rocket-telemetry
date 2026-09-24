@@ -1,4 +1,7 @@
+use serde::{Serialize, Deserialize};
 
+
+#[derive(Serialize, Deserialize, Debug)]
 pub struct TelemetryData {
     pub roll: f64,
     pub pitch: f64,
@@ -7,6 +10,7 @@ pub struct TelemetryData {
     pub flight_state: FlightState,
 }
 
+#[derive(Serialize, Deserialize, Debug)]
 pub enum FlightState {
     Preflight,
     Launch,

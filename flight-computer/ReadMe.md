@@ -56,10 +56,10 @@ Implemented:
 - MPU6050 accelerometer and gyroscope readings
 - BMP280 temperature and pressure readings
 - Pressure-based altitude calculation
+- Packet encoding and radio or serial transmission
 
 Not implemented yet:
 
-- Packet encoding and radio or serial transmission
 - Ground-station communication
 - Persistent flight-data storage
 - Flight-state detection and control logic

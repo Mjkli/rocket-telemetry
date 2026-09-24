@@ -225,10 +225,6 @@ fn main() {
         let bmp_temp = bmp.temp();
 
 
-
-
-
-
         // Log the data
         let sensor_data = TelemetryData {
             roll: roll_angle.to_degrees(),
@@ -237,9 +233,10 @@ fn main() {
             temperature: bmp_temp,
             flight_state: FlightState::Preflight,
         };
-        // log::info!("Roll: {:.2}, Pitch: {:.2}, Altitude: {:.2} m, Temperature: {:.2} °C", sensor_data.roll, sensor_data.pitch, sensor_data.altitude, sensor_data.temperature);
 
-        uart.write("Hello from ESP32!\n".as_bytes()).unwrap();
+        let encoded_data = protocol::encode(&sensor_data).unwrap();
+        uart.write(&encoded_data).unwrap();
+
         FreeRtos::delay_ms(TIME_RATE);
     }
 }
