@@ -7,6 +7,7 @@ use esp_idf_hal::gpio::{PinDriver};
 use esp_idf_hal::delay::FreeRtos;
 use esp_idf_hal::i2c::{I2cConfig, I2cDriver, I2c};
 use esp_idf_hal::units::Hertz;
+use esp_idf_hal::uart::{UartDriver, config::Config};
 
 use mpu6050::Mpu6050;
 use mpu6050::device::ACCEL_HPF;
@@ -144,6 +145,19 @@ fn main() {
     
     let bus = BusManagerSimple::new(i2c);
 
+    let config = Config::new().baudrate(Hertz(9600));
+
+    let uart = UartDriver::new(
+        peripherals.uart1,
+        peripherals.pins.gpio6, // RX
+        peripherals.pins.gpio5, // TX
+        Option::<esp_idf_hal::gpio::AnyIOPin>::None, // RTS
+        Option::<esp_idf_hal::gpio::AnyIOPin>::None, // CTS
+        &config,
+    ).unwrap();
+
+
+
     let mut mpu = Mpu6050::new(bus.acquire_i2c());
     mpu.init(&mut FreeRtos).unwrap();
     log::info!("Calibrating, keep sensor still...");
@@ -230,7 +244,7 @@ fn main() {
         };
         // log::info!("Roll: {:.2}, Pitch: {:.2}, Altitude: {:.2} m, Temperature: {:.2} °C", sensor_data.roll, sensor_data.pitch, sensor_data.altitude, sensor_data.temperature);
 
-
+        uart.write("Hello from ESP32!\n".as_bytes()).unwrap();
         FreeRtos::delay_ms(TIME_RATE);
     }
 }
