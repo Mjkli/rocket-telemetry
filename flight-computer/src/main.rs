@@ -15,6 +15,8 @@ use bmp280_ehal::{BMP280, Control, Oversampling, PowerMode};
 use embedded_hal::blocking::i2c::{Write, WriteRead};
 use shared_bus::BusManagerSimple;
 
+use flight_computer::{FlightState, TelemetryData};
+
 use nalgebra::{Vector3};
 use libm::{atan2, sqrt};
 
@@ -115,14 +117,6 @@ where
     });
 
     (mean, var_sum / (samples - 1) as f32)
-}
-
-
-struct SensorData {
-    roll: f64,
-    pitch: f64,
-    altitude: f64,
-    temperature: f64,
 }
 
 
@@ -236,11 +230,12 @@ fn main() {
 
 
         // Log the data
-        let sensor_data = SensorData {
+        let sensor_data = TelemetryData {
             roll: roll_angle.to_degrees(),
             pitch: pitch_angle.to_degrees(),
             altitude,
             temperature: bmp_temp,
+            flight_state: FlightState::Preflight,
         };
         // log::info!("Roll: {:.2}, Pitch: {:.2}, Altitude: {:.2} m, Temperature: {:.2} °C", sensor_data.roll, sensor_data.pitch, sensor_data.altitude, sensor_data.temperature);
 
