@@ -1,72 +1,41 @@
 # Binary Telemetry Protocol
 
-A lightweight binary framing library for serial communication between the flight computer and the ground station. This crate is not a full networking protocol; it is a compact encoding layer for transmitting Rust data over UART / serial links.
+`protocol` is a small Rust crate for framing serialized telemetry for UART or other byte-stream transports. It combines `postcard` serialization, a `u16` message count, CRC validation, and COBS encoding.
 
-## What it does
-
-The crate takes any `serde::Serialize` payload and converts it into a packet that is:
-
-- compact and portable via `postcard`
-- safe for UART streams using COBS encoding
-- protected from corruption using a CRC16 checksum
-- easy to decode back into the original type with `serde::Deserialize`
-
-This is a good fit for embedded telemetry where a continuous byte stream needs an unambiguous way to detect packet boundaries.
+It is an encoding layer, not a complete networking protocol: it does not provide acknowledgements, retransmission, packet types, or stream buffering.
 
 ## Packet format
 
-Each payload is encoded in this order:
+Before COBS encoding, each packet is laid out as follows:
 
-1. Serialize the struct with `postcard`
-2. Append a CRC-16/IBM-SDLC checksum as 2 bytes
-3. Run the result through COBS encoding before transmission
+1. Message count as a big-endian `u16` (2 bytes)
+2. Payload serialized with `postcard`
+3. CRC-16/IBM-SDLC as a big-endian `u16` (2 bytes)
 
-The final transmitted payload is the COBS-encoded buffer.
+The CRC covers both the message count and the serialized payload. The complete buffer is then encoded with COBS and returned by `encode`.
 
-In practical terms:
-
-- `postcard` handles compact binary serialization
-- `crc` validates payload integrity
-- `cobs` helps packet boundary detection in a continuous serial stream
-
-## Why COBS
-
-UART and serial interfaces are byte-oriented and do not provide packet framing by themselves. A raw binary payload may contain zero bytes (`0x00`), which makes it hard to know where one message ends and the next begins.
-
-COBS avoids that by encoding zero bytes out of the data stream and replacing them with index markers. This makes packet recovery from a continuous stream much easier without storing a separate length prefix for every message.
-
-## CRC validation
-
-The crate currently uses the `CRC_16_IBM_SDLC` polynomial and validates the message on decode. The process is:
-
-- calculate the checksum of the serialized payload
-- append the 2-byte CRC to the payload
-- decode the COBS data at the receiver
-- verify that the received CRC matches the recalculated CRC
-- reject corrupt packets before deserializing
+COBS removes zero bytes from the encoded data, making the result suitable for framing on a continuous serial stream. The transport is responsible for supplying a complete COBS-encoded packet to `decode`.
 
 ## API
 
 ```rust
-use protocol::{encode, decode};
+pub fn encode<T>(value: &T, count: u16) -> anyhow::Result<Vec<u8>>
+where
+    T: serde::Serialize;
 
-let payload = encode(&my_struct)?;
-let decoded: MyStruct = decode(&payload)?;
+pub fn decode<T>(data: &[u8]) -> anyhow::Result<(T, u16)>
+where
+    T: serde::de::DeserializeOwned;
 ```
 
-The public functions are:
-
-- `encode<T>(&T) -> Result<Vec<u8>>`
-- `decode<T>(&[u8]) -> Result<T>`
-
-The type `T` must implement `serde::Serialize` and `serde::Deserialize`.
+`decode` first COBS-decodes the input, validates the CRC, reads the message count, and then deserializes the payload. Corrupt packets are rejected before deserialization.
 
 ## Example
 
 ```rust
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 struct Telemetry {
     altitude: f64,
     temperature: f64,
@@ -79,35 +48,29 @@ let data = Telemetry {
     speed: 18.2,
 };
 
-let encoded = protocol::encode(&data).unwrap();
-let decoded: Telemetry = protocol::decode(&encoded).unwrap();
+let encoded = protocol::encode(&data, 1)?;
+let (decoded, count): (Telemetry, u16) = protocol::decode(&encoded)?;
 
-assert!((decoded.altitude - data.altitude).abs() < f64::EPSILON);
+assert_eq!(decoded, data);
+assert_eq!(count, 1);
+# Ok::<(), anyhow::Error>(())
 ```
 
-## Current usage in the project
+## Tests
 
-The crate is currently used to serialize the telemetry payload from the flight computer, including values such as roll, pitch, altitude, temperature, and flight state. The packet format is designed to be sent over a UART connection between the flight computer and the ground-station / desktop application.
+The crate includes tests for payload round-tripping and for all message counts from `1` through `u16::MAX`.
 
-## Future direction
+Run them from the repository root with:
 
-This crate is intentionally simple right now, but the architecture leaves room for additional metadata such as:
-
-- message sequence numbers
-- message type / packet ID tags
-- acknowledgements or retransmission tracking
-- end-to-end validation for lost packets
-
-Those improvements can be layered on top of the current framing format without changing the core binary encoding idea.
+```text
+cargo test --manifest-path protocol/Cargo.toml
+```
 
 ## Dependencies
 
-- `postcard`: compact binary serialization
-- `cobs`: COBS encoding and decoding
-- `crc`: CRC calculation
-- `serde`: serialization and deserialization traits
-- `anyhow`: error handling
-
-## Summary
-
-This crate provides a robust and compact binary encoding layer for serial telemetry. It is not meant to be a full protocol stack yet; it is a practical wire format for reliable, stream-friendly data transmission between embedded and host systems.
+- `postcard` with the `alloc` feature for compact serialization
+- `cobs` for stream-safe encoding
+- `crc` using `CRC_16_IBM_SDLC`
+- `serde` for serialization and deserialization traits
+- `anyhow` for error handling
+- `rand` as a development dependency for randomized tests
