@@ -5,3 +5,6 @@ Also starting to think about the ground station. Right now with the outline of t
 Setup my Mac to cross compile the package for raspbery-pi 3.
 Install cargo-cross: `cargo install cargo-cross`
 Then just built via: `cargo cross build --release --target aarch64-unknown-linux-gnu`
+Had to move the TelemetryData Struct into the protocol lib. 
+So that the ground-station doesnt bring in the esp-idf lib for compiling to arduino.
+Now I need to work on, how the ground station ingests the bytes from the stream to construct packets on the receiving side.
