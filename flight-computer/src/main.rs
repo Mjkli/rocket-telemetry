@@ -15,7 +15,7 @@ use bmp280_ehal::{BMP280, Control, Oversampling, PowerMode};
 use embedded_hal::blocking::i2c::{Write, WriteRead};
 use shared_bus::BusManagerSimple;
 
-use flight_computer::{FlightState, TelemetryData};
+use protocol::telemetry_data::{FlightState, TelemetryData};
 
 use nalgebra::{Vector3};
 use libm::{atan2, sqrt};

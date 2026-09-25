@@ -1,3 +1,5 @@
+pub mod telemetry_data;
+
 use cobs;
 use anyhow::Result;
 use postcard::to_allocvec;
