@@ -1,5 +1,6 @@
+use protocol::telemetry_data::{FlightState, TelemetryData};
 
-struct PacketParser {
+pub struct PacketParser {
     buffer: Vec<u8>,
 }
 
@@ -11,8 +12,11 @@ impl PacketParser {
     }
 
     pub fn push(&mut self, bytes: &[u8]) -> Option<Vec<TelemetryData>> {
-        self.buffer.push(bytes);
+        self.buffer.extend(bytes);
+        // Check if the buffer contains packet/s 
         
+
+        None
     }
 
 
