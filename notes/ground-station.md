@@ -8,3 +8,7 @@ Then just built via: `cargo cross build --release --target aarch64-unknown-linux
 Had to move the TelemetryData Struct into the protocol lib. 
 So that the ground-station doesnt bring in the esp-idf lib for compiling to arduino.
 Now I need to work on, how the ground station ingests the bytes from the stream to construct packets on the receiving side.
+
+# 09-26-2026
+figured out some issues with my raspberry-pi. Have the serial port open now and is reading the UART stream properly now.
+Just have to build in the stream parcer / buffer to get packets out of the stream to read.

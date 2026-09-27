@@ -14,8 +14,11 @@ fn main() -> Result<()>{
     loop {
         match port.read(&mut buffer) {
             Ok(n) => {
-                println!("Read {} bytes from serial port", n);
-                let packets: Option<Vec<TelemetryData>> = parser.push(&buffer[..n]);
+                println!("Read {} bytes: {:?}", n, &buffer[..n]);
+                // let packets: Option<Vec<TelemetryData>> = parser.push(&buffer[..n]);
+            }
+            Err(ref e) if e.kind() == std::io::ErrorKind::TimedOut => {
+                // no data yet. keep waiting
             }
             Err(e) => {
                 eprintln!("Error reading from serial port: {:?}", e);
