@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.104"
+log = "0.4.34"
 protocol = { path = "../protocol" }
 serialport = { version = "4.10.1", default-features = false }
 

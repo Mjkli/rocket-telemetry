@@ -17,4 +17,8 @@ Just have to build in the stream parcer / buffer to get packets out of the strea
 Okay getting back to this. Was studying leetcode problems. But going to pick up where i left off, building out the packet buffer.
 Intial feeling is building out a circular buffer that can hold multiple packets.
 Okay working into this, I am figuring out that I cant really parse the stream unless i give myself some keys to look at. header / footer.
-So I can look for this pattern in the stream and construct the packet from there.  
+So I can look for this pattern in the stream and construct the packet from there.
+Added the parsing now. And working in a cargo test. Need to rn a test from the flight computer to ground-station now. 
+But I did notice I am not passing the packet count with the packet. So I need to go back and add that so I can get it later.
+Added count to the telemetry Data. So that I dont have to worry about extracting after the fact. 
+Logic is able to parse a stream of u8s and return a vec of packets. Need to add more logic to test what happens if the vec buffer over fills.

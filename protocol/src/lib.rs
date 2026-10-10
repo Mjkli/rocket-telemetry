@@ -8,16 +8,11 @@ use crc::{Crc, CRC_16_IBM_SDLC};
 const CRC16: Crc<u16> = Crc::<u16>::new(&CRC_16_IBM_SDLC);
 
 
-pub fn encode<T>(value: &T, count: u16) -> Result<Vec<u8>> 
+pub fn encode<T>(value: &T) -> Result<Vec<u8>> 
 where
 T: serde::Serialize,
 {
-    let mut buffer: Vec<u8> = {
-        let mut b = Vec::new();
-        b.push((count >> 8) as u8);
-        b.push((count & 0xFF) as u8);
-        b
-    };
+    let mut buffer: Vec<u8> = Vec::new();
     
     buffer.append(&mut to_allocvec(value)?);
     
@@ -55,17 +50,23 @@ fn validate_crc(data: &[u8]) -> Result<()> {
     Ok(())
 }
 
-pub fn decode<T>(data: &[u8]) -> Result<(T, u16)> 
+pub fn decode<T>(data: &[u8]) -> Result<T> 
 where T: serde::de::DeserializeOwned
 {
-    let decoded_data = cobs::decode_vec(&data[1..])?;
-    validate_crc(&decoded_data)?;
+    let decoded_data = match cobs::decode_vec(&data) {
+        Ok(decoded) => decoded,
+        Err(e) => return Err(anyhow::anyhow!("COBS decoding failed: {:?}", e)),
+    };
 
-    let data = &decoded_data[2..decoded_data.len() - 2];
-    let count = u16::from_be_bytes([decoded_data[0], decoded_data[1]]);
+    if let Err(e) = validate_crc(&decoded_data) {
+        return Err(anyhow::anyhow!("CRC validation failed: {:?}", e));
+    };
+
+    // Remove the last two bytes (CRC) before deserialization
+    let data = &decoded_data[0..decoded_data.len() - 2];
     let value: T = postcard::from_bytes(data)?;
 
-    Ok((value, count))
+    Ok(value)
 }
 
 
@@ -87,11 +88,13 @@ mod tests {
             b: "Hello, world!".to_string(),
         };
 
-        let encoded_data = encode(&original_data, 1).unwrap();
-        let (decoded_data, count): (TestData, u16) = decode(&encoded_data).unwrap();
+        let encoded_data = encode(&original_data).unwrap();
+        let decoded_data: TestData = match decode(&encoded_data) {
+            Ok(data) => data,
+            Err(e) => panic!("Decoding failed: {:?}", e),
+        };
 
         assert_eq!(original_data, decoded_data);
-        assert_eq!(count, 1);
     }
 
     #[test]
@@ -100,6 +103,7 @@ mod tests {
         struct TestData {
             a: u32,
             b: String,
+            count: u16,
         }
 
         
@@ -107,12 +111,12 @@ mod tests {
             let original_data = TestData {
                 a: rand::random(),
                 b: "Hello, world!".to_string(),
+                count,
             };
-            let encoded_data = encode(&original_data, count).unwrap();
-            let (decoded_data, decoded_count): (TestData, u16) = decode(&encoded_data).unwrap();
+            let encoded_data = encode(&original_data).unwrap();
+            let decoded_data: TestData = decode(&encoded_data).unwrap();
 
             assert_eq!(original_data, decoded_data);
-            assert_eq!(count, decoded_count);
         }
     }
 
@@ -124,6 +128,7 @@ mod tests {
             altitude: 30.0,
             temperature: 28.0,
             flight_state: FlightState::Preflight,
+            count: 1,
         };
 
         let new_data = TelemetryData {
@@ -132,10 +137,11 @@ mod tests {
             altitude: 35.0,
             temperature: 28.0,
             flight_state: FlightState::Preflight,
+            count: 2,
         };
 
-        let encoded_data = encode(&original_data, 1).unwrap();
-        let encoded_data2 = encode(&new_data, 2).unwrap();
+        let encoded_data = encode(&original_data).unwrap();
+        let encoded_data2 = encode(&new_data).unwrap();
         println!("Encoded packet size: {} :: \n Packet {:?}", encoded_data.len(), encoded_data);
         println!("Encoded packet size: {} :: \n Packet {:?}", encoded_data2.len(), encoded_data2);
         assert!(encoded_data.len() <= 256, "Encoded packet size exceeds 256 bytes");
