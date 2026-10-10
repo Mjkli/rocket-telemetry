@@ -7,3 +7,6 @@ edition = "2021"
 anyhow = "1.0.104"
 protocol = { path = "../protocol" }
 serialport = { version = "4.10.1", default-features = false }
+
+[dev-dependencies]
+rand = "0.10.3"

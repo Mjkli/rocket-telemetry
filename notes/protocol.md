@@ -16,3 +16,6 @@ So the packet should look something like this:
 [u8, u8][cobs header of pointers][packet data][u8,u8]
 Okay counter added to packet to be used when decoding. 
 This is useful to detect packet drop-out / packet misordering
+
+# 10-10-2026
+Working on parsing the stream. I realized i need a way to detect the beginning and end of the packet. SO i need to add a header / footer key u8s. 

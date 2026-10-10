@@ -14,6 +14,7 @@ fn main() -> Result<()>{
     loop {
         match port.read(&mut buffer) {
             Ok(n) => {
+                let packets: Option<Vec<TelemetryData>> = parser.push(&buffer[..n]);
                 println!("Read {} bytes: {:?}", n, &buffer[..n]);
                 // let packets: Option<Vec<TelemetryData>> = parser.push(&buffer[..n]);
             }

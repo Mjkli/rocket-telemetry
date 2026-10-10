@@ -12,3 +12,9 @@ Now I need to work on, how the ground station ingests the bytes from the stream 
 # 09-26-2026
 figured out some issues with my raspberry-pi. Have the serial port open now and is reading the UART stream properly now.
 Just have to build in the stream parcer / buffer to get packets out of the stream to read.
+
+# 10-10-2026
+Okay getting back to this. Was studying leetcode problems. But going to pick up where i left off, building out the packet buffer.
+Intial feeling is building out a circular buffer that can hold multiple packets.
+Okay working into this, I am figuring out that I cant really parse the stream unless i give myself some keys to look at. header / footer.
+So I can look for this pattern in the stream and construct the packet from there.  
