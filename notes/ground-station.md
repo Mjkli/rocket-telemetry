@@ -22,3 +22,15 @@ Added the parsing now. And working in a cargo test. Need to rn a test from the f
 But I did notice I am not passing the packet count with the packet. So I need to go back and add that so I can get it later.
 Added count to the telemetry Data. So that I dont have to worry about extracting after the fact. 
 Logic is able to parse a stream of u8s and return a vec of packets. Need to add more logic to test what happens if the vec buffer over fills.
+
+# 10-11-2026
+I added a test that adds noise to the packet chunk. To Simulate "static" this would break the flow of a good packet stream adding in more u8s then wanted in a packet. 
+Im not sure If we should tackle this edge case now, and just move forward with trying to get packets flowing from the flight computer.
+Okay ran into another issue. I need to re-think how I handle the buffer logic. 
+Okay I found out that i am querying the bus to fast and doing looping operations for only 1 u8 at at time. I backed off the loop speed, and made the speed variable to the amount of buffers coming in.
+Buffer logic seems to be working now, Now I think I need to return to the packet parsing logic. As If I dont have the proper logic,
+I get an infinate loop. Lookng for the first 0x00 and then assuming the next 39 bytes are the packet isnt correct. I think I need to
+keep a pointer at the 0x00 and tehn scan ahead to find the next 0x00. That should tell me the bounds of the packet.
+Okay Got IT! I had to update the parsing loop to only do an iter to the first 0x00 and then another loop that starts from that position,
+and find the next 0x00. 
+After i did this and tweaked the timing on the buffer, I am able to see the telemetry packets on the ground station side! WOOP 

@@ -1,11 +1,9 @@
-use anyhow::Result;
 use protocol::decode;
-use protocol::telemetry_data::{FlightState, TelemetryData};
-use std::collections::VecDeque;
+use protocol::telemetry_data::{TelemetryData};
 use log::error;
 
 pub struct PacketParser {
-    buffer: Vec<u8>,
+    pub buffer: Vec<u8>,
 }
 
 impl PacketParser {
@@ -33,25 +31,37 @@ impl PacketParser {
         // Iterate through the buffer to find packets. when we find a 0x00 byte, we check if there are enough bytes after it to form a complete packet. 
         // If so, we attempt to decode it. If decoding is successful, we add the packet to the list and remove the bytes from the buffer.
         // If not, we log an error and continue searching for the next packet.
-        while let Some(i) = self.buffer.iter().position(|&byte| byte == 0x00) {
-            // need to have this check here so that we dont try to decode a packet that is not complete yet. 
-            // If we dont have enough bytes for a full packet, we break out of the loop and wait for more data to be pushed into the buffer.
-            if self.buffer.len() < i + 38 {
-                break; // Not enough data for a full packet
-            }
+        loop {
+            // Iterate from start to first 0x00 byte to find start of packet 
+            let packet_start = match self.buffer.iter().position(|&b| b == 0x00) {
+                Some(i) => i,
+                None => {
+                    break;
+                }
+            };
 
-            let possible_packet: &[u8] = &self.buffer.as_slice()[i..(i + 38)];
+            // Start at packet_start index, and continue until we find the next 0x00 delimeter.
+            let packet_end = match self.buffer
+                .iter()
+                .skip(packet_start + 1)
+                .position(|&b| b == 0x00)
+                {
+                    Some(pos) => packet_start + 1 + pos,
+                    None => break,
+                };
+
+            let possible_packet: &[u8] = &self.buffer.as_slice()[packet_start..packet_end];
 
             match decode::<TelemetryData>(&possible_packet) {
                 Ok(packet) => {
                     packets.push(packet);
-                    self.buffer.drain(0..(i + 38));
                 }
                 Err(e) => {
                     log::error!("Error decoding packet: {:?}", e);
                 }
             }
 
+            self.buffer.drain(packet_start..packet_end);
         }
 
         if packets.is_empty() {
@@ -107,6 +117,31 @@ mod tests {
         }
         println!("Packets received: {:?}", packets);
         assert_eq!(packets.len(), 10);
-    }        
+    }
+    
+    // #[test]
+    // fn test_packet_parser_with_noise() {
+    //     let mut stream = encode_telemetry_data();
+
+    //     // Add some noise to the stream
+    //     let noise: Vec<u8> = (0..50).map(|_| rand::random::<u8>()).collect();
+    //     stream.splice(10..10, noise);
+
+    //     let mut parser = PacketParser::new();
+    //     let mut packets: Vec<TelemetryData> = Vec::new();
+    //     while !stream.is_empty() {
+    //         // Want to randomly chunk the stream into smaller pieces to simulate real-world data transmission
+    //         let mut chunk_size: usize = rng().random_range(0..=20);
+    //         if chunk_size > stream.len() {
+    //             chunk_size = stream.len();
+    //         }
+    //         let chunk: Vec<u8> = stream.drain(0..chunk_size).collect();
+    //         if let Some(new_packets) = parser.push(&chunk) {
+    //             packets.extend(new_packets);
+    //         }
+    //     }
+    //     println!("Packets received with noise: {:?}", packets);
+    //     assert_eq!(packets.len(), 10);
+    // }
 
 }

@@ -1,6 +1,4 @@
 use anyhow::Result;
-use protocol::decode;
-use protocol::telemetry_data::{FlightState, TelemetryData};
 use ground_station::PacketParser;
 
 fn main() -> Result<()>{
@@ -10,13 +8,19 @@ fn main() -> Result<()>{
     
     let mut buffer = [0u8; 256];
     let mut parser = PacketParser::new();
-
+    let mut loop_speed = 5; // 5 ms delay between reads
     loop {
         match port.read(&mut buffer) {
             Ok(n) => {
-                let packets: Option<Vec<TelemetryData>> = parser.push(&buffer[..n]);
-                println!("Read {} bytes: {:?}", n, &buffer[..n]);
-                // let packets: Option<Vec<TelemetryData>> = parser.push(&buffer[..n]);
+                match parser.push(&buffer[..n]) {
+                    Some(packets) => {
+                        for packet in packets {
+                            println!("Received packet roll and pitch: {} :: {}", packet.roll, packet.pitch);
+                        }
+                    }
+                    None => {}
+                }
+
             }
             Err(ref e) if e.kind() == std::io::ErrorKind::TimedOut => {
                 // no data yet. keep waiting
@@ -26,6 +30,8 @@ fn main() -> Result<()>{
                 break;
             }
         }
+
+        std::thread::sleep(std::time::Duration::from_millis(loop_speed));
     }
     
 

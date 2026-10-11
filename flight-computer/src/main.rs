@@ -1,16 +1,14 @@
 
-use std::collections::VecDeque;
 use std::time::Instant;
 
 use esp_idf_hal::peripherals::Peripherals;
 use esp_idf_hal::gpio::{PinDriver};
 use esp_idf_hal::delay::FreeRtos;
-use esp_idf_hal::i2c::{I2cConfig, I2cDriver, I2c};
+use esp_idf_hal::i2c::{I2cConfig, I2cDriver};
 use esp_idf_hal::units::Hertz;
 use esp_idf_hal::uart::{UartDriver, config::Config};
 
 use mpu6050::Mpu6050;
-use mpu6050::device::ACCEL_HPF;
 use bmp280_ehal::{BMP280, Control, Oversampling, PowerMode};
 use embedded_hal::blocking::i2c::{Write, WriteRead};
 use shared_bus::BusManagerSimple;
@@ -45,7 +43,6 @@ where
 {
     let mut sum = Vector3::new(0.0f32, 0.0, 0.0);
     let mut sample_data: Vec<Vector3<f32>> = Vec::with_capacity(samples);
-    let mut variance_sum = Vector3::new(0.0f32, 0.0, 0.0);
     for _ in 0..samples {
         let a = mpu.get_acc().unwrap();
         sample_data.push(a);
@@ -102,7 +99,6 @@ where
 {
     let mut sum = Vector3::new(0.0f32, 0.0, 0.0);
     let mut sample_data: Vec<Vector3<f32>> = Vec::with_capacity(samples);
-    let mut variance_sum = Vector3::new(0.0f32, 0.0, 0.0);
     for _ in 0..samples {
         let a = mpu.get_gyro().unwrap();
         sample_data.push(a);
@@ -156,8 +152,8 @@ fn main() {
     mpu.init(&mut FreeRtos).unwrap();
     log::info!("Calibrating, keep sensor still...");
     let (gyro_bias, gyro_v) = calibrate_gyro(&mut mpu, 2000); // ~2 seconds at 1ms delay
-    let (accel_bias, accel_v) = calibrate_accel(&mut mpu, 2000); // ~2 seconds at 1ms delay
-    let (R_roll, R_pitch) = calibrate_accel_angles(&mut mpu, 2000); // ~2 seconds at 1ms delay
+    let (_accel_bias, _accel_v) = calibrate_accel(&mut mpu, 2000); // ~2 seconds at 1ms delay
+    let (r_roll, r_pitch) = calibrate_accel_angles(&mut mpu, 2000); // ~2 seconds at 1ms delay
 
 
     red_led.set_low().unwrap();
@@ -179,9 +175,9 @@ fn main() {
     let mut roll_angle = 0.0f64;
     let mut pitch_angle = 0.0f64;
     
-    let mut P_roll = 1.0f64; // our sensor uncertainty
-    let mut P_pitch = 1.0f64;
-    let Q_gyro = gyro_v; // sensor variance
+    let mut p_roll = 1.0f64; // our sensor uncertainty
+    let mut p_pitch = 1.0f64;
+    let q_gyro = gyro_v; // sensor variance
 
     let mut packet_count: u16 = 1;
 
@@ -203,8 +199,8 @@ fn main() {
         pitch_angle += (corrected_gyro.y as f64) * (dt as f64);
 
         // Update the uncertainty
-        P_roll += (Q_gyro.x as f64) * (dt as f64).powi(2);
-        P_pitch += (Q_gyro.y as f64) * (dt as f64).powi(2);
+        p_roll += (q_gyro.x as f64) * (dt as f64).powi(2);
+        p_pitch += (q_gyro.y as f64) * (dt as f64).powi(2);
 
         let raw = mpu.get_acc().unwrap();
         let roll = get_roll_angle(raw);
@@ -212,14 +208,14 @@ fn main() {
 
 
         // Measurement Update
-        let K_roll = P_roll / (P_roll + R_roll);
-        let K_pitch = P_pitch / (P_pitch + R_pitch);
-        roll_angle += K_roll * (roll - roll_angle);
-        pitch_angle += K_pitch * (pitch - pitch_angle);
+        let k_roll = p_roll / (p_roll + r_roll);
+        let k_pitch = p_pitch / (p_pitch + r_pitch);
+        roll_angle += k_roll * (roll - roll_angle);
+        pitch_angle += k_pitch * (pitch - pitch_angle);
 
 
-        P_roll = (1.0 - K_roll) * P_roll;
-        P_pitch = (1.0 - K_pitch) * P_pitch;
+        p_roll = (1.0 - k_roll) * p_roll;
+        p_pitch = (1.0 - k_pitch) * p_pitch;
 
     
         let pressure = bmp.pressure() / 100.0;
@@ -234,9 +230,10 @@ fn main() {
             altitude,
             temperature: bmp_temp,
             flight_state: FlightState::Preflight, // Staying in Preflight for now, will implement state machine later
+            count: packet_count,
         };
 
-        let encoded_data = protocol::encode(&sensor_data, packet_count).unwrap();
+        let encoded_data = protocol::encode(&sensor_data).unwrap();
         packet_count += 1;
         uart.write(&encoded_data).unwrap();
 
