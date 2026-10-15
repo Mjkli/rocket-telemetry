@@ -15,7 +15,7 @@ fn main() -> Result<()>{
                 match parser.push(&buffer[..n]) {
                     Some(packets) => {
                         for packet in packets {
-                            println!("Received packet roll and pitch: {} :: {}", packet.roll, packet.pitch);
+                            println!("Received packet: {:?}", packet); 
                         }
                     }
                     None => {}
