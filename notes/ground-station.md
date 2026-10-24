@@ -33,4 +33,12 @@ I get an infinate loop. Lookng for the first 0x00 and then assuming the next 39 
 keep a pointer at the 0x00 and tehn scan ahead to find the next 0x00. That should tell me the bounds of the packet.
 Okay Got IT! I had to update the parsing loop to only do an iter to the first 0x00 and then another loop that starts from that position,
 and find the next 0x00. 
-After i did this and tweaked the timing on the buffer, I am able to see the telemetry packets on the ground station side! WOOP 
+After i did this and tweaked the timing on the buffer, I am able to see the telemetry packets on the ground station side! WOOP
+
+# 10-22-2026
+Took some time off to focus on other things. But Im back, and now I am deciding how i want to communicate with clients.
+Decided that I want to use websockets for communication between server and clients.
+
+# 10-23-2026
+Okay figured i am going to use FastSockets library. I want this to be as small as possible because i am running an a Pi 3b. Able to support 1 client but need to manage 
+multiple clients.
