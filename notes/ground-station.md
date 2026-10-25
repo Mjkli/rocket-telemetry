@@ -42,3 +42,7 @@ Decided that I want to use websockets for communication between server and clien
 # 10-23-2026
 Okay figured i am going to use FastSockets library. I want this to be as small as possible because i am running an a Pi 3b. Able to support 1 client but need to manage 
 multiple clients.
+
+# 10-24-206
+Added multiple client to the websocket service. Although the websocket service doesnt do anything yet. Need to connect it to a main run-time loop in the ground-station so I can
+deal with the different messages coming in.
