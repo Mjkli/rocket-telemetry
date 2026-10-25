@@ -20,7 +20,7 @@ bmp280-ehal = "0.0.6"
 libm = "0.2.16"
 ndarray = "0.17.2"
 nalgebra = "0.31.4"
-protocol = { path = "../protocol" }
+protocol = { path = "../libraries/protocol" }
 serde = "1.0.229"
 
 [build-dependencies]
