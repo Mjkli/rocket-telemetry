@@ -46,3 +46,5 @@ multiple clients.
 # 10-24-206
 Added multiple client to the websocket service. Although the websocket service doesnt do anything yet. Need to connect it to a main run-time loop in the ground-station so I can
 deal with the different messages coming in.
+Okay added tokio because I need to spawn some threads to manage incoming stream / incoming messages / Outgoing streams / outgoing messages.
+May have to setup a 2 websocket solution.
