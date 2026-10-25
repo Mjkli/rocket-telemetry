@@ -48,3 +48,4 @@ Added multiple client to the websocket service. Although the websocket service d
 deal with the different messages coming in.
 Okay added tokio because I need to spawn some threads to manage incoming stream / incoming messages / Outgoing streams / outgoing messages.
 May have to setup a 2 websocket solution.
+Desided also that I need to come up with a log format when I want to load back data.
