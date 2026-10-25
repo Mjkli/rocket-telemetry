@@ -1,17 +1,17 @@
 use anyhow::Result;
 use serialport::SerialPort;
 use crate::parcer::parcer::PacketParser;
+use tokio::sync::mpsc::Sender;
 
 
-
-pub fn buf_reader(serial_port: &str) -> Result<()> {
+pub fn buf_reader<T>(serial_port: &str, main_tx: Sender<T>) -> Result<()> {
  let mut port = serialport::new(serial_port, 9600)
         .timeout(std::time::Duration::from_millis(100))
         .open()?;
     
     let mut buffer = [0u8; 256];
     let mut parser = PacketParser::new();
-    let mut loop_speed = 5; // 5 ms delay between reads
+    let mut loop_speed = 5;
     loop {
         match port.read(&mut buffer) {
             Ok(n) => {

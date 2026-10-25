@@ -8,6 +8,7 @@ anyhow = "1.0.104"
 log = "0.4.34"
 protocol = { path = "../libraries/protocol" }
 serialport = { version = "4.10.1", default-features = false }
+tokio = { version = "1.54.1", features = ["macros", "net", "sync"] }
 
 websocket_server = { path = "../libraries/websocket/server"}
 
