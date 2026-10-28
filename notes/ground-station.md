@@ -43,9 +43,14 @@ Decided that I want to use websockets for communication between server and clien
 Okay figured i am going to use FastSockets library. I want this to be as small as possible because i am running an a Pi 3b. Able to support 1 client but need to manage 
 multiple clients.
 
-# 10-24-206
+# 10-24-2026
 Added multiple client to the websocket service. Although the websocket service doesnt do anything yet. Need to connect it to a main run-time loop in the ground-station so I can
 deal with the different messages coming in.
 Okay added tokio because I need to spawn some threads to manage incoming stream / incoming messages / Outgoing streams / outgoing messages.
 May have to setup a 2 websocket solution.
-Desided also that I need to come up with a log format when I want to load back data.
+Desided also that I need to come up with a log format when I want to load back data. But will have to figure that out once i get the pipeline.
+
+# 10-27-2026
+Websocket servers are connected! I decided that there should be a message websocket and a stream socket so that I can parce packets and messages in different threads.
+I dont want the stream of packets to interupt messages coming from clients. (when i decide to integrate that). But for now, Lets just have the ground station pass the packets
+to the clients.

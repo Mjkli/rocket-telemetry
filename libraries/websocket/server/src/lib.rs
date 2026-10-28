@@ -10,36 +10,39 @@ use std::sync::atomic::Ordering;
 
 
 
-struct WebsocketServer {
+pub struct WebsocketServer {
     clients: Arc<Mutex<HashMap<Uuid, JoinHandle<()>>>>,
     runtime: Option<JoinHandle<()>>,
     stop_flag: Arc<AtomicBool>, 
     addr: &'static str,
+    main_tx: tokio::sync::mpsc::Sender<String>,
 }
 
 impl WebsocketServer {
-    fn new(addr: &'static str) -> Self {
+    pub fn new(addr: &'static str, main_tx: tokio::sync::mpsc::Sender<String>) -> Self {
         WebsocketServer {
             clients: Arc::new(Mutex::new(HashMap::new())),
             stop_flag: Arc::new(AtomicBool::new(false)),
             runtime: None,
             addr,
+            main_tx,
         }
     }
 
-    fn serve(&mut self) -> Result<()> {
+    pub fn serve(&mut self) -> Result<()> {
 
         let clients_clone = Arc::clone(&self.clients);
         let stop_flag_clone = Arc::clone(&self.stop_flag);
         let addr_clone = self.addr;
+        let main_tx_clone = self.main_tx.clone();
 
         self.runtime = Some(tokio::spawn(async move {
-            let _ = websocket_lifetime(clients_clone, stop_flag_clone, addr_clone).await;
+            let _ = websocket_lifetime(clients_clone, stop_flag_clone, addr_clone, main_tx_clone).await;
         }));
         Ok(())
     }
 
-    fn stop(&mut self)  -> Result<()> {
+    pub fn stop(&mut self)  -> Result<()> {
         self.stop_flag.store(true, Ordering::SeqCst);
         self.runtime.take().map(|handle: JoinHandle<()>| handle.abort());
         Ok(())
@@ -49,7 +52,8 @@ impl WebsocketServer {
 async fn websocket_lifetime(
     clients: Arc<Mutex<HashMap<Uuid, JoinHandle<()>>>>, 
     stop_flag: Arc<AtomicBool>,
-    address: &str
+    address: &str,
+    main_tx: tokio::sync::mpsc::Sender<String>
 ) -> Result<()>
 {
 
@@ -65,8 +69,9 @@ async fn websocket_lifetime(
         
         let clients_clone = Arc::clone(&clients);
         let mut clients_lock = clients.lock().unwrap();
+        let main_tx_clone = main_tx.clone();
         clients_lock.insert(client_id, tokio::spawn(async move {
-            if let Err(e) = handle_client(socket, clients_clone, client_id.clone()).await {
+            if let Err(e) = handle_client(socket, clients_clone, client_id.clone(), main_tx_clone).await {
                 eprintln!("Error handling connection: {:?}", e);
             }
         }));
@@ -78,7 +83,7 @@ async fn websocket_lifetime(
 
 }
 
-async fn handle_client(stream: TcpStream, clients: Arc<Mutex<HashMap<Uuid, JoinHandle<()>>>>, client_id: Uuid) -> Result<()> {
+async fn handle_client(stream: TcpStream, clients: Arc<Mutex<HashMap<Uuid, JoinHandle<()>>>>, client_id: Uuid, main_tx: tokio::sync::mpsc::Sender<String>) -> Result<()> {
 
     let mut ws: WebSocket<TcpStream> = WebSocket::after_handshake(stream, Role::Server);
 
@@ -87,17 +92,20 @@ async fn handle_client(stream: TcpStream, clients: Arc<Mutex<HashMap<Uuid, JoinH
             Ok(frame) => frame,
             Err(e) => {
                 eprintln!("Error reading frame: {:?}", e);
-                break;
+                continue;
             }
         };
 
         match frame.opcode {
             OpCode::Close => break,
             OpCode::Text | OpCode::Binary => { 
-                if ws.write_frame(frame).await.is_err() {
-                    eprintln!("Error writing frame");
-                    break;
-                }
+                let message: String = match String::from_utf8(frame.payload.to_vec()) {
+                    Ok(s) => s,
+                    Err(e) => {
+                        eprintln!("Invalid UTF-8: {:?}", e);
+                        continue;
+                    }
+                };
             }
             _ => {}
         }

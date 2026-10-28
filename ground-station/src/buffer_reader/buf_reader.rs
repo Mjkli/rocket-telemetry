@@ -4,7 +4,7 @@ use crate::parcer::parcer::PacketParser;
 use tokio::sync::mpsc::Sender;
 
 
-pub fn buf_reader<T>(serial_port: &str, main_tx: Sender<T>) -> Result<()> {
+pub async fn buf_reader<T>(serial_port: &str, main_tx: Sender<T>) -> Result<()> {
  let mut port = serialport::new(serial_port, 9600)
         .timeout(std::time::Duration::from_millis(100))
         .open()?;
