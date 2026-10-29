@@ -53,7 +53,7 @@ fn validate_crc(data: &[u8]) -> Result<()> {
 pub fn decode<T>(data: &[u8]) -> Result<T> 
 where T: serde::de::DeserializeOwned
 {
-    let decoded_data = match cobs::decode_vec(&data) {
+    let decoded_data = match cobs::decode_vec(&data[1..]) {
         Ok(decoded) => decoded,
         Err(e) => return Err(anyhow::anyhow!("COBS decoding failed: {:?}", e)),
     };
