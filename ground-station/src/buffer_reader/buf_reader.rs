@@ -2,9 +2,11 @@ use anyhow::Result;
 use serialport::SerialPort;
 use crate::parcer::parcer::PacketParser;
 use tokio::sync::mpsc::Sender;
+use websocket_server::OutboundData;
+use postcard;
+use log::error;
 
-
-pub async fn buf_reader<T>(serial_port: &str, main_tx: Sender<T>) -> Result<()> {
+pub fn buf_reader(serial_port: &str, stream_tx: Sender<OutboundData>) -> Result<()> {
  let mut port = serialport::new(serial_port, 9600)
         .timeout(std::time::Duration::from_millis(100))
         .open()?;
@@ -23,11 +25,23 @@ pub async fn buf_reader<T>(serial_port: &str, main_tx: Sender<T>) -> Result<()> 
                 match parser.push(&buffer[..n]) {
                     Some(packets) => {
                         for packet in packets {
-                            println!("Received packet number: {:?}", packet.count);
+                            let packet_count = packet.count.clone();
+                            match postcard::to_allocvec(&packet) {
+                                Ok(bin_packet) => {
+                                    stream_tx.blocking_send(OutboundData::Binary(bin_packet));
+                                }
+                                Err(e) => {
+                                    // I dont know if we should continue here if we want to track packet metrics?
+                                    // Should we count it as an error?
+                                    error!("Error serializing telemetry packet :: {:?}", e);
+                                    continue;
+                                }
+                            }
+
                             caught += 1;
 
                             if let Some(previous_count) = count {
-                                let packet_delta = packet.count.wrapping_sub(previous_count);
+                                let packet_delta = packet_count.wrapping_sub(previous_count);
 
                                 if packet_delta > 1 && packet_delta <= u16::MAX / 2 {
                                     let recent_missed = u64::from(packet_delta - 1);
@@ -41,7 +55,7 @@ pub async fn buf_reader<T>(serial_port: &str, main_tx: Sender<T>) -> Result<()> 
                                 }
                             }
 
-                            count = Some(packet.count);
+                            count = Some(packet_count);
 
                         }
                     }

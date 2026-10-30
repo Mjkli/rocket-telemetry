@@ -90,3 +90,14 @@ Received packet: TelemetryData { roll: 2.5913795281613186, pitch: 0.630985701617
 
 # 10-29-2026
 Updated the parcing logic to look for the first 0x00 and the next 0x00. Once we slowed down the fight-computer transmition it made it stable.
+Added multiple types to the websocket so that I can have multiple types go through.
+
+# 10-30-2026
+Okay now today I just need to determine how to handle the Telemetry data i get. What I want to do for right now, is to just forward the packet to all the connected clients.
+Just so I can see the data on a graph. Once that is established then I want to determine how to store that data in a log format so that I can upload to AWS. Then I can query,
+a REST server from there to pull logs from the cloud.
+
+Determined that I need to re-write how I want the websocket server to work. Currently the implementation prevents me communicating with clients. kinda pointless.
+
+Okay I updated the websocket logic alot! Now the main loop can handle sending a reply to a client,
+or broadcast to all clients. The shutdown hooks are also setup properly now so all threads can shutdown properly
