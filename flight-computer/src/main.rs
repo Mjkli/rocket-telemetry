@@ -7,6 +7,7 @@ use esp_idf_hal::delay::FreeRtos;
 use esp_idf_hal::i2c::{I2cConfig, I2cDriver};
 use esp_idf_hal::units::Hertz;
 use esp_idf_hal::uart::{UartDriver, config::Config};
+use esp_idf_hal::io::Write as ioWrite;
 
 use mpu6050::Mpu6050;
 use bmp280_ehal::{BMP280, Control, Oversampling, PowerMode};
@@ -18,7 +19,7 @@ use protocol::telemetry_data::{FlightState, TelemetryData};
 use nalgebra::{Vector3};
 use libm::{atan2, sqrt};
 
-const TIME_RATE: u32 = 100;
+const TIME_RATE: u32 = 150;
 
 
 fn calculate_altitude(p: f64) -> f64 {
@@ -135,15 +136,17 @@ fn main() {
     
     let bus = BusManagerSimple::new(i2c);
 
-    let config = Config::new().baudrate(Hertz(9600));
+    let uart_config = Config::new()
+                    .baudrate(Hertz(9600))
+                    .tx_fifo_size(256);
 
-    let uart = UartDriver::new(
+    let mut uart = UartDriver::new(
         peripherals.uart1,
         peripherals.pins.gpio6, // RX
         peripherals.pins.gpio5, // TX
         Option::<esp_idf_hal::gpio::AnyIOPin>::None, // RTS
         Option::<esp_idf_hal::gpio::AnyIOPin>::None, // CTS
-        &config,
+        &uart_config,
     ).unwrap();
 
 
@@ -235,7 +238,14 @@ fn main() {
 
         let encoded_data = protocol::encode(&sensor_data).unwrap();
         packet_count += 1;
-        uart.write(&encoded_data).unwrap();
+
+        if let Err(e) = uart.write_all(&encoded_data) {
+            log::error!("UART write failed: {:?}", e);
+        }
+        
+        if let Err(e) = uart.wait_tx_done(100) {
+            log::error!("UART TX FIFO did not drain in time: {:?}", e);
+        }
 
         FreeRtos::delay_ms(TIME_RATE);
     }

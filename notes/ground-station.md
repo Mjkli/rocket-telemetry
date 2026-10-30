@@ -86,3 +86,7 @@ Received packet: TelemetryData { roll: 2.5499720587628247, pitch: 0.584976934016
 Received packet: TelemetryData { roll: 2.575644384390436, pitch: 0.6066102963469958, altitude: 29.172, temperature: 24.620896260228257, flight_state: Preflight, count: 36 }                                
 Received packet: TelemetryData { roll: 2.5913795281613186, pitch: 0.6309857016173369, altitude: 29.215, temperature: 24.622765619560322, flight_state: Preflight, count: 37 }
 ```
+
+
+# 10-29-2026
+Updated the parcing logic to look for the first 0x00 and the next 0x00. Once we slowed down the fight-computer transmition it made it stable.

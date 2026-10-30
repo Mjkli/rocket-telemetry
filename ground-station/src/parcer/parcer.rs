@@ -23,12 +23,6 @@ impl PacketParser {
             return None; // Not enough data for a packet
         }
 
-        // println!(
-        //     "buffer_len={}, packet_start={:?}",
-        //     self.buffer.len(),
-        //     self.buffer.iter().position(|&b| b == 0x00),
-        // );
-
         self.parse()
     }
 
@@ -51,19 +45,12 @@ impl PacketParser {
                     break;
                 }
             };
-
-            if self.buffer.len() < packet_end {
-                cursor = packet_start;
-                break;
-            }
-
             
             let possible_packet: &[u8] = &self.buffer.as_slice()[packet_start..packet_end];
 
             match decode::<TelemetryData>(&possible_packet) {
                 Ok(packet) => {
                     packets.push(packet);
-                    cursor = packet_end;
                 }
                 Err(e) => {
                     println!(
@@ -72,10 +59,10 @@ impl PacketParser {
                         e
                     );
 
-                    // Search for the next possible frame header.
-                    cursor = packet_start + 1;
                 }
+                // Search for the next possible frame header.
             }
+            cursor = packet_end;
         }
 
         self.buffer.drain(..cursor);

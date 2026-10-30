@@ -40,4 +40,8 @@ Got the RF module working! That should be it for the inital part of the flight c
 Connected the encoding, Flight computer will send structured data over the RF now.
 
 # 09-24-2026
-packet counter update has been updated to the telemetry encoding now. 
+packet counter update has been updated to the telemetry encoding now.
+
+# 10-29-2026
+Had to slow down the loop speed so that the RF module can send the packets without filling up its internal buffer.
+I also added a wait until buffer is clear before continuing.
