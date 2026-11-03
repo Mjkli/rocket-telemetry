@@ -4,10 +4,11 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::AtomicBool;
 use uuid::Uuid;
-use fastwebsockets::{WebSocket, OpCode, Role};
 use tokio::net::{TcpListener, TcpStream};
 use std::sync::atomic::Ordering;
 use protocol::telemetry_data::TelemetryData;
+use tokio_tungstenite::tungstenite::Message;
+use futures_util::StreamExt;
 use log::error;
 
 
@@ -116,6 +117,7 @@ async fn websocket_lifetime(
             result = listener.accept() => {
                 let (socket, _) = result?;
                 let client_id = Uuid::new_v4();
+                println!("New client connected: {:?}", client_id);
                 
                 let (client_tx, client_rx) = tokio::sync::mpsc::channel::<OutboundData>(10);
                 {
@@ -134,6 +136,8 @@ async fn websocket_lifetime(
                         eprintln!("Error handling connection: {:?}", e);
                     }
                 }));
+
+
             }
 
             //outbound to client(s)
@@ -185,27 +189,45 @@ async fn handle_client(
     mut client_rx: tokio::sync::mpsc::Receiver<OutboundData>,
     mut shutdown_rx: tokio::sync::watch::Receiver<bool> 
 ) -> Result<()> {
-
-    let mut ws: WebSocket<TcpStream> = WebSocket::after_handshake(stream, Role::Server);
+    
+    let mut ws = tokio_tungstenite::accept_async(stream).await?;
 
     loop {
         tokio::select! {
-
+            // handle outbound data to client
             out = client_rx.recv() => {
 
+            }
+
+            //inbound data from client
+            msg = ws.next() => {
+                let Some(msg) = msg else {
+                    break;
+                };
+
+                match msg? {
+                    Message::Text(text) => {
+                        println!("Received: {text}");
+                    }
+                    Message::Binary(data) => {
+                        println!("Received {} bytes", data.len());
+                    }
+                    Message::Close(_) => break,
+                    _ => {}
+                }
             }
             
             //shutdown handle
             _ = shutdown_rx.changed() => {
                 break;
             }
-
         }   
     }
 
     {
         let mut clients_lock = clients.lock().map_err(|e| anyhow::anyhow!("Failed to lock clients :: {:?}", e))?;
         clients_lock.remove(&client_id);
+        println!("Client disconnected: {:?}", client_id);
     }
 
     Ok(())
