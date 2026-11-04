@@ -1,8 +1,7 @@
-import Websocket from 'isomorphic-ws';
 
-
-function Websocket() {
-  const ws = new WebSocket("192.168.0.157:8081");
+function websocket(addr:  string) {
+  let ws: WebSocket = new WebSocket("ws://" + addr);
+  
   ws.onopen = function open() {
     console.log('connected');
   };
@@ -15,6 +14,8 @@ function Websocket() {
     console.log("Received: " + data.data);
   };
 
+  return ws;
+
 }
 
-export default Websocket;
+export default websocket;

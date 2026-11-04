@@ -1,9 +1,11 @@
 import { useState } from "react";
 import reactLogo from "./assets/react.svg";
 import "./App.css";
+import webSocket from "../../websocket/src/App.tsx";
+
 
 function App() {
-  let ws: WebSocket = new WebSocket("ws://127.0.0.1:8080");
+  let ws: WebSocket = webSocket("127.0.0.1:8080");
 
   return (
     <>
