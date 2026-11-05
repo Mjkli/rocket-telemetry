@@ -41,10 +41,15 @@ impl PacketParser {
             let packet_end = match self.buffer[packet_start + 1..].iter().position(|&b| b == 0x00) {
                 Some(pos) => packet_start + 1 + pos,
                 None => {
-                    // println!("End not found!");
+                    cursor = packet_start;
                     break;
                 }
             };
+
+            if packet_end == packet_start + 1 {
+                cursor = packet_start + 1;
+                continue;
+            }
             
             let possible_packet: &[u8] = &self.buffer.as_slice()[packet_start..packet_end];
 
@@ -53,7 +58,7 @@ impl PacketParser {
                     packets.push(packet);
                 }
                 Err(e) => {
-                    println!(
+                    log::debug!(
                         "Invalid frame at offset {}: {:?}",
                         packet_start,
                         e
@@ -62,7 +67,7 @@ impl PacketParser {
                 }
                 // Search for the next possible frame header.
             }
-            cursor = packet_end;
+            cursor = packet_end + 1;
         }
 
         self.buffer.drain(..cursor);

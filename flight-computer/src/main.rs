@@ -238,7 +238,6 @@ fn main() {
 
         let encoded_data = protocol::encode(&sensor_data).unwrap();
         packet_count += 1;
-
         if let Err(e) = uart.write_all(&encoded_data) {
             log::error!("UART write failed: {:?}", e);
         }
@@ -246,6 +245,8 @@ fn main() {
         if let Err(e) = uart.wait_tx_done(100) {
             log::error!("UART TX FIFO did not drain in time: {:?}", e);
         }
+
+        log::info!("Sent data: {:?}", sensor_data);
 
         FreeRtos::delay_ms(TIME_RATE);
     }

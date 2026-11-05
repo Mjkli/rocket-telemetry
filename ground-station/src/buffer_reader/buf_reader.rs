@@ -26,6 +26,7 @@ pub fn buf_reader(serial_port: &str, stream_tx: Sender<OutboundData>) -> Result<
                     Some(packets) => {
                         for packet in packets {
                             let packet_count = packet.count.clone();
+                            println!("Packet Count: {}", packet_count);
                             match postcard::to_allocvec(&packet) {
                                 Ok(bin_packet) => {
                                     stream_tx.blocking_send(OutboundData::Binary(bin_packet));

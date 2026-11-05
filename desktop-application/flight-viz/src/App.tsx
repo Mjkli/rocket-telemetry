@@ -5,7 +5,7 @@ import webSocket from "../../websocket/src/App.tsx";
 
 
 function App() {
-  let ws: WebSocket = webSocket("127.0.0.1:8080");
+  let ws: WebSocket = webSocket("192.168.0.118:8081");
 
   return (
     <>
