@@ -18,9 +18,9 @@ impl PacketParser {
 
     pub fn push(&mut self, bytes: &[u8]) -> Option<Vec<TelemetryData>> {
         self.buffer.extend(bytes);
-        // Check if the buffer contains enough data for at least one packet (38 bytes)
+
         if self.buffer.len() < PACKETSIZE {
-            return None; // Not enough data for a packet
+            return None;
         }
 
         self.parse()
@@ -38,36 +38,26 @@ impl PacketParser {
                 }
             };
 
-            let packet_end = match self.buffer[packet_start + 1..].iter().position(|&b| b == 0x00) {
-                Some(pos) => packet_start + 1 + pos,
-                None => {
-                    cursor = packet_start;
-                    break;
-                }
-            };
+            let packet_end = packet_start + PACKETSIZE;
+            if self.buffer.len() < packet_end {
+                cursor = packet_start;
+                break;
+            }
 
-            if packet_end == packet_start + 1 {
+            let possible_packet: &[u8] = &self.buffer[packet_start..packet_end];
+
+            if possible_packet.len() != PACKETSIZE {
                 cursor = packet_start + 1;
                 continue;
             }
-            
-            let possible_packet: &[u8] = &self.buffer.as_slice()[packet_start..packet_end];
 
             match decode::<TelemetryData>(&possible_packet) {
                 Ok(packet) => {
                     packets.push(packet);
                 }
-                Err(e) => {
-                    log::debug!(
-                        "Invalid frame at offset {}: {:?}",
-                        packet_start,
-                        e
-                    );
-
-                }
-                // Search for the next possible frame header.
+                Err(e) => log::error!("Error decoding packet: {:?}", e),
             }
-            cursor = packet_end + 1;
+            cursor = packet_end;
         }
 
         self.buffer.drain(..cursor);
@@ -75,6 +65,7 @@ impl PacketParser {
         if packets.is_empty() {
             None
         } else {
+            println!("Parsed {} packets from buffer", packets.len());
             Some(packets)
         }
     }
@@ -134,7 +125,6 @@ mod tests {
         let mut parser = PacketParser::new();
         let mut stream = encoded_packet(1);
         stream.extend(encoded_packet(2));
-
         let packets = parser.push(&stream).unwrap();
 
         assert_eq!(packets.iter().map(|packet| packet.count).collect::<Vec<_>>(), [1, 2]);
@@ -149,7 +139,6 @@ mod tests {
         corrupt_packet[10] ^= 0x01;
         stream.extend(corrupt_packet);
         stream.extend(encoded_packet(2));
-
         let packets = parser.push(&stream).unwrap();
 
         assert_eq!(packets.len(), 1);

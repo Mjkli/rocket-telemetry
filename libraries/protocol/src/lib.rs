@@ -27,9 +27,7 @@ T: serde::Serialize,
     // Encode the buffer using COBS
     let mut bytes_with_cobs: Vec<u8> = cobs::encode_vec(&buffer);
 
-    // Add a header byte to the beginning of the COBS-encoded data
-    let header: u8 = 0x00; // COBS header byte
-    bytes_with_cobs.insert(0, header);
+    // Add a footer byte to the end of the COBS-encoded data
     bytes_with_cobs.push(0x00);
 
     Ok(bytes_with_cobs)
@@ -54,12 +52,7 @@ fn validate_crc(data: &[u8]) -> Result<()> {
 pub fn decode<T>(data: &[u8]) -> Result<T> 
 where T: serde::de::DeserializeOwned
 {
-    let frame = if data.last() == Some(&0x00) {
-        &data[1..data.len() - 1]
-    } else {
-        &data[1..]
-    };
-    let decoded_data = match cobs::decode_vec(frame) {
+    let decoded_data = match cobs::decode_vec(&data[..data.len() - 1]) {
         Ok(decoded) => decoded,
         Err(e) => return Err(anyhow::anyhow!("COBS decoding failed: {:?}", e)),
     };

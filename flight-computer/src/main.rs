@@ -19,7 +19,7 @@ use protocol::telemetry_data::{FlightState, TelemetryData};
 use nalgebra::{Vector3};
 use libm::{atan2, sqrt};
 
-const TIME_RATE: u32 = 150;
+const TIME_RATE: u32 = 5000;
 
 
 fn calculate_altitude(p: f64) -> f64 {
@@ -142,8 +142,8 @@ fn main() {
 
     let mut uart = UartDriver::new(
         peripherals.uart1,
-        peripherals.pins.gpio6, // RX
-        peripherals.pins.gpio5, // TX
+        peripherals.pins.gpio43, // TX
+        peripherals.pins.gpio44, // RX
         Option::<esp_idf_hal::gpio::AnyIOPin>::None, // RTS
         Option::<esp_idf_hal::gpio::AnyIOPin>::None, // CTS
         &uart_config,
@@ -183,6 +183,26 @@ fn main() {
     let q_gyro = gyro_v; // sensor variance
 
     let mut packet_count: u16 = 1;
+
+
+
+
+    // Test telemetry data
+    // let test_data = TelemetryData {
+    //     roll: 0.93872938,
+    //     pitch: 0.2874827728,
+    //     altitude: 30.0,
+    //     temperature: 28.0,
+    //     flight_state: FlightState::Preflight,
+    //     count: 1,
+    // };
+
+    let test = [
+        0x01, 0x02, 0x03, 0x04, 0x05,
+        0x06, 0x07, 0x08, 0x09, 0x0A,
+        0x00,
+    ];
+
 
     loop {
         let raw_gyro = mpu.get_gyro().unwrap();
@@ -238,7 +258,8 @@ fn main() {
 
         let encoded_data = protocol::encode(&sensor_data).unwrap();
         packet_count += 1;
-        if let Err(e) = uart.write_all(&encoded_data) {
+
+        if let Err(e) = uart.write_all(&test) {
             log::error!("UART write failed: {:?}", e);
         }
         
@@ -246,7 +267,7 @@ fn main() {
             log::error!("UART TX FIFO did not drain in time: {:?}", e);
         }
 
-        log::info!("Sent data: {:?}", sensor_data);
+        log::info!("Sent data: {:?}", test);
 
         FreeRtos::delay_ms(TIME_RATE);
     }
