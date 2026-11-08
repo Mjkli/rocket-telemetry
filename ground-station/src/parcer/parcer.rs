@@ -18,9 +18,6 @@ impl PacketParser {
 
     pub fn push(&mut self, bytes: &[u8]) -> Option<Vec<TelemetryData>> {
         self.buffer.extend(bytes);
-
-        println!("Buffer: {:02X?}", self.buffer);
-
         if self.buffer.len() < PACKETSIZE {
             return None;
         }

@@ -142,8 +142,8 @@ fn main() {
 
     let mut uart = UartDriver::new(
         peripherals.uart1,
-        peripherals.pins.gpio5, // TX
-        peripherals.pins.gpio6, // RX
+        peripherals.pins.gpio5, // RX
+        peripherals.pins.gpio6, // TX
         Option::<esp_idf_hal::gpio::AnyIOPin>::None, // RTS
         Option::<esp_idf_hal::gpio::AnyIOPin>::None, // CTS
         &uart_config,
@@ -239,7 +239,7 @@ fn main() {
         let encoded_data = protocol::encode(&sensor_data).unwrap();
         packet_count += 1;
 
-        let test_data = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x00];
+        let test_data = [0xAA, 0x55, 0x00, 0xFF];
 
         if let Err(e) = uart.write_all(&test_data) {
             log::error!("UART write failed: {:?}", e);

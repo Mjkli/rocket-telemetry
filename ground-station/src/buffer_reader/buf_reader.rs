@@ -17,36 +17,39 @@ pub fn buf_reader<T>(serial_port: &str, main_tx: Sender<T>) -> Result<()> {
     let mut caught: u64 = 0;
     let mut missed: u64 = 0;
 
+    let mut test_vec: Vec<u8> = Vec::new();
+
     loop {
         match port.read(&mut buffer) {
             Ok(n) => {
-                match parser.push(&buffer[..n]) {
-                    Some(packets) => {
-                        for packet in packets {
-                            println!("Received packet number: {:?}", packet.count);
-                            caught += 1;
+                println!("RX bytes: {:02X?}", &buffer[..n]);
+                // match parser.push(&buffer[..n]) {
+                //     Some(packets) => {
+                //         for packet in packets {
+                //             println!("Received packet number: {:?}", packet.count);
+                //             caught += 1;
 
-                            if let Some(previous_count) = count {
-                                let packet_delta = packet.count.wrapping_sub(previous_count);
+                //             if let Some(previous_count) = count {
+                //                 let packet_delta = packet.count.wrapping_sub(previous_count);
 
-                                if packet_delta > 1 && packet_delta <= u16::MAX / 2 {
-                                    let recent_missed = u64::from(packet_delta - 1);
-                                    println!("Packets Missed! :: {}", recent_missed);
-                                    missed += recent_missed;
+                //                 if packet_delta > 1 && packet_delta <= u16::MAX / 2 {
+                //                     let recent_missed = u64::from(packet_delta - 1);
+                //                     println!("Packets Missed! :: {}", recent_missed);
+                //                     missed += recent_missed;
 
-                                    let loss_percentage = missed as f64
-                                        / (caught + missed) as f64
-                                        * 100.0;
-                                    println!("Percentage of packet loss :: {:.2}%", loss_percentage);
-                                }
-                            }
+                //                     let loss_percentage = missed as f64
+                //                         / (caught + missed) as f64
+                //                         * 100.0;
+                //                     println!("Percentage of packet loss :: {:.2}%", loss_percentage);
+                //                 }
+                //             }
 
-                            count = Some(packet.count);
+                //             count = Some(packet.count);
 
-                        }
-                    }
-                    None => {}
-                }
+                //         }
+                //     }
+                //     None => {}
+                // }
 
             }
             Err(ref e) if e.kind() == std::io::ErrorKind::TimedOut => {
