@@ -15,10 +15,11 @@ pub async fn ground_station() -> Result<()> {
     let (main_message_tx, mut main_message_rx) = tokio::sync::mpsc::channel::<OutboundData>(100);
     
     let main_stream_tx_clone = main_stream_tx.clone();
-    let buffer_thread: JoinHandle<Result<(), anyhow::Error>> = tokio::task::spawn_blocking(move || {
-            buf_reader("/dev/serial0", main_stream_tx_clone)
+    let buffer_thread: JoinHandle<()> = tokio::task::spawn_blocking(move || {
+        if let Err(error) = buf_reader("/dev/serial0", main_stream_tx_clone) {
+            eprintln!("Serial reader failed: {error:#}");
         }
-    );
+    });
     
     let mut message_ws = WebsocketServer::new("0.0.0.0:8080", main_message_tx.clone());
     let mut stream_ws = WebsocketServer::new("0.0.0.0:8081", main_stream_tx.clone());
