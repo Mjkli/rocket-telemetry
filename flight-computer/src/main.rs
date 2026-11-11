@@ -19,7 +19,7 @@ use protocol::telemetry_data::{FlightState, TelemetryData};
 use nalgebra::{Vector3};
 use libm::{atan2, sqrt};
 
-const TIME_RATE: u32 = 150;
+const TIME_RATE: u32 = 500;
 
 
 fn calculate_altitude(p: f64) -> f64 {
@@ -142,8 +142,8 @@ fn main() {
 
     let mut uart = UartDriver::new(
         peripherals.uart1,
-        peripherals.pins.gpio5, // RX
-        peripherals.pins.gpio6, // TX
+        peripherals.pins.gpio9, // TX
+        peripherals.pins.gpio6, // RX
         Option::<esp_idf_hal::gpio::AnyIOPin>::None, // RTS
         Option::<esp_idf_hal::gpio::AnyIOPin>::None, // CTS
         &uart_config,

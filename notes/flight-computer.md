@@ -45,3 +45,10 @@ packet counter update has been updated to the telemetry encoding now.
 # 10-29-2026
 Had to slow down the loop speed so that the RF module can send the packets without filling up its internal buffer.
 I also added a wait until buffer is clear before continuing.
+
+
+# 11-10-2026
+Been having issues with either the Pi receiving invalid frames or the arduino sending invalid frames.
+I purchased a logic analyzer and have been trying to see what is happening.
+I narrowed it down to the ardunio sending invalid frames.
+Now I am just debugging why it is.
