@@ -5,10 +5,15 @@ use tokio::sync::mpsc::Sender;
 
 
 pub fn buf_reader<T>(serial_port: &str, main_tx: Sender<T>) -> Result<()> {
- let mut port = serialport::new(serial_port, 9600)
+    let mut port = serialport::new(serial_port, 9600)
+        .data_bits(serialport::DataBits::Eight)
+        .parity(serialport::Parity::None)
+        .stop_bits(serialport::StopBits::One)
+        .flow_control(serialport::FlowControl::None)
         .timeout(std::time::Duration::from_millis(100))
         .open()?;
-    
+
+
     let mut buffer = [0u8; 256];
     let mut parser = PacketParser::new();
     let mut loop_speed = 5;
@@ -22,34 +27,33 @@ pub fn buf_reader<T>(serial_port: &str, main_tx: Sender<T>) -> Result<()> {
     loop {
         match port.read(&mut buffer) {
             Ok(n) => {
-                println!("RX bytes: {:02X?}", &buffer[..n]);
-                // match parser.push(&buffer[..n]) {
-                //     Some(packets) => {
-                //         for packet in packets {
-                //             println!("Received packet number: {:?}", packet.count);
-                //             caught += 1;
+                match parser.push(&buffer[..n]) {
+                    Some(packets) => {
+                        for packet in packets {
+                            println!("Received packet number: {:?}", packet.count);
+                            caught += 1;
 
-                //             if let Some(previous_count) = count {
-                //                 let packet_delta = packet.count.wrapping_sub(previous_count);
+                            if let Some(previous_count) = count {
+                                let packet_delta = packet.count.wrapping_sub(previous_count);
 
-                //                 if packet_delta > 1 && packet_delta <= u16::MAX / 2 {
-                //                     let recent_missed = u64::from(packet_delta - 1);
-                //                     println!("Packets Missed! :: {}", recent_missed);
-                //                     missed += recent_missed;
+                                if packet_delta > 1 && packet_delta <= u16::MAX / 2 {
+                                    let recent_missed = u64::from(packet_delta - 1);
+                                    println!("Packets Missed! :: {}", recent_missed);
+                                    missed += recent_missed;
 
-                //                     let loss_percentage = missed as f64
-                //                         / (caught + missed) as f64
-                //                         * 100.0;
-                //                     println!("Percentage of packet loss :: {:.2}%", loss_percentage);
-                //                 }
-                //             }
+                                    let loss_percentage = missed as f64
+                                        / (caught + missed) as f64
+                                        * 100.0;
+                                    println!("Percentage of packet loss :: {:.2}%", loss_percentage);
+                                }
+                            }
 
-                //             count = Some(packet.count);
+                            count = Some(packet.count);
 
-                //         }
-                //     }
-                //     None => {}
-                // }
+                        }
+                    }
+                    None => {}
+                }
 
             }
             Err(ref e) if e.kind() == std::io::ErrorKind::TimedOut => {

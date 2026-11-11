@@ -19,7 +19,7 @@ use protocol::telemetry_data::{FlightState, TelemetryData};
 use nalgebra::{Vector3};
 use libm::{atan2, sqrt};
 
-const TIME_RATE: u32 = 500;
+const TIME_RATE: u32 = 150;
 
 
 fn calculate_altitude(p: f64) -> f64 {
@@ -239,9 +239,8 @@ fn main() {
         let encoded_data = protocol::encode(&sensor_data).unwrap();
         packet_count += 1;
 
-        let test_data = [0xAA, 0x55, 0x00, 0xFF];
 
-        if let Err(e) = uart.write_all(&test_data) {
+        if let Err(e) = uart.write_all(&encoded_data) {
             log::error!("UART write failed: {:?}", e);
         }
         
@@ -249,7 +248,7 @@ fn main() {
             log::error!("UART TX FIFO did not drain in time: {:?}", e);
         }
 
-        log::info!("Sending Telemetry Data: {:02X?}", test_data);
+        log::info!("Sending Telemetry Data: {:02X?}", encoded_data);
 
         FreeRtos::delay_ms(TIME_RATE);
     }

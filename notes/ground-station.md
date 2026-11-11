@@ -101,3 +101,6 @@ Determined that I need to re-write how I want the websocket server to work. Curr
 
 Okay I updated the websocket logic alot! Now the main loop can handle sending a reply to a client,
 or broadcast to all clients. The shutdown hooks are also setup properly now so all threads can shutdown properly
+
+# 11-10-2026
+Okay fixed the RF and hardware layers. Now I am back to optimizing the ground station handling the stream of packets coming in.

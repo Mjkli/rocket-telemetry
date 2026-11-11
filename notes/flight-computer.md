@@ -52,3 +52,7 @@ Been having issues with either the Pi receiving invalid frames or the arduino se
 I purchased a logic analyzer and have been trying to see what is happening.
 I narrowed it down to the ardunio sending invalid frames.
 Now I am just debugging why it is.
+Okay! figured out what was happening. Apperantly if you dont setup the proper uart settings in raspberry pis settings.
+It takes the baud rate from the clock and not from the defined rate(9600). So I had to run some commands and edit a config file. And it seemed to work.
+After fixing that. I had to debug the RF communication.
+Now I really understand how the wiring is setup. 

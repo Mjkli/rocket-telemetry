@@ -1,6 +1,5 @@
 use protocol::decode;
 use protocol::telemetry_data::{TelemetryData};
-const PACKETSIZE: usize = 38;
 
 pub struct PacketParser {
     pub buffer: Vec<u8>,
@@ -8,8 +7,7 @@ pub struct PacketParser {
 
 impl PacketParser {
     pub fn new() -> Self {
-
-        const SIZE: usize = 256; // Packet size is 38, so this should be enough to hold multiple packets
+        const SIZE: usize = 256;
 
         PacketParser {
             buffer: Vec::with_capacity(SIZE),
@@ -17,49 +15,42 @@ impl PacketParser {
     }
 
     pub fn push(&mut self, bytes: &[u8]) -> Option<Vec<TelemetryData>> {
-        self.buffer.extend(bytes);
-        if self.buffer.len() < PACKETSIZE {
-            return None;
-        }
-
+        self.buffer.extend_from_slice(bytes);
         self.parse()
     }
 
     pub fn parse(&mut self) -> Option<Vec<TelemetryData>> {
         let mut packets = Vec::new();
         let mut cursor = 0;
-        loop {
-            let packet_start = match self.buffer[cursor..].iter().position(|&b| b == 0x00) {
+
+        while cursor < self.buffer.len() {
+            let packet_end = match self.buffer[cursor..].iter().position(|&b| b == 0x00) {
                 Some(pos) => cursor + pos,
-                None => {
-                    cursor = self.buffer.len();
-                    break;
-                }
+                None => break,
             };
 
-            let packet_end = packet_start + PACKETSIZE;
-            if self.buffer.len() < packet_end {
-                cursor = packet_start;
-                break;
-            }
+            let candidate = &self.buffer[cursor..=packet_end];
 
-            let possible_packet: &[u8] = &self.buffer[packet_start..packet_end];
-
-            if possible_packet.len() != PACKETSIZE {
-                cursor = packet_start + 1;
+            if candidate.len() == 1 {
+                cursor += 1;
                 continue;
             }
 
-            match decode::<TelemetryData>(&possible_packet) {
+            match decode::<TelemetryData>(candidate) {
                 Ok(packet) => {
                     packets.push(packet);
+                    cursor = packet_end + 1;
                 }
-                Err(e) => log::error!("Error decoding packet: {:?}", e),
+                Err(e) => {
+                    log::error!("Error decoding packet: {:?}", e);
+                    cursor += 1;
+                }
             }
-            cursor = packet_end;
         }
 
-        self.buffer.drain(..cursor);
+        if cursor > 0 {
+            self.buffer.drain(..cursor);
+        }
 
         if packets.is_empty() {
             None
