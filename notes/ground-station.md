@@ -104,3 +104,10 @@ or broadcast to all clients. The shutdown hooks are also setup properly now so a
 
 # 11-10-2026
 Okay fixed the RF and hardware layers. Now I am back to optimizing the ground station handling the stream of packets coming in.
+
+# 11-11-2026
+Now that we have everything fixed. I want to see how we can parse the packets out better.
+A producer / consumer queue. As frames coming in the buf_reader will fill a queue. And A consumer thread will pull from the queue to parse out the Telemetry data.
+Or There is a ring buffer solution. Where we just fill up a pre-allocated buffer and parsing Data from that. Then if the buffer is full, data will start over-
+riding the biggening of the buffer. This is so that memory allocation doesnt grow.
+Or we can continue using the method now and parse an ever growing buffer and draining it with a curosr on every frame injest. (I dont think this is optimal)
