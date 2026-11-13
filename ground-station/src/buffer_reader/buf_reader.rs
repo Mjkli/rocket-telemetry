@@ -1,6 +1,7 @@
 use anyhow::Result;
 use serialport::SerialPort;
 use crate::parcer::parcer::PacketParser;
+use crate::buffer::buffer::RingBuffer;
 use tokio::sync::mpsc::Sender;
 
 
@@ -14,7 +15,7 @@ pub fn buf_reader<T>(serial_port: &str, main_tx: Sender<T>) -> Result<()> {
         .open()?;
 
 
-    let mut buffer = [0u8; 256];
+    let mut inbound = [0u8; 256];
     let mut parser = PacketParser::new();
     let mut loop_speed = 5;
 
@@ -24,36 +25,12 @@ pub fn buf_reader<T>(serial_port: &str, main_tx: Sender<T>) -> Result<()> {
 
     let mut test_vec: Vec<u8> = Vec::new();
 
+    let mut buffer = RingBuffer::<u8>::new(256, 0);
+
     loop {
-        match port.read(&mut buffer) {
+        match port.read(&mut inbound) {
             Ok(n) => {
-                match parser.push(&buffer[..n]) {
-                    Some(packets) => {
-                        for packet in packets {
-                            println!("Received packet number: {:?}", packet.count);
-                            caught += 1;
 
-                            if let Some(previous_count) = count {
-                                let packet_delta = packet.count.wrapping_sub(previous_count);
-
-                                if packet_delta > 1 && packet_delta <= u16::MAX / 2 {
-                                    let recent_missed = u64::from(packet_delta - 1);
-                                    println!("Packets Missed! :: {}", recent_missed);
-                                    missed += recent_missed;
-
-                                    let loss_percentage = missed as f64
-                                        / (caught + missed) as f64
-                                        * 100.0;
-                                    println!("Percentage of packet loss :: {:.2}%", loss_percentage);
-                                }
-                            }
-
-                            count = Some(packet.count);
-
-                        }
-                    }
-                    None => {}
-                }
 
             }
             Err(ref e) if e.kind() == std::io::ErrorKind::TimedOut => {

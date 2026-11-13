@@ -1,5 +1,6 @@
 pub mod parcer;
 pub mod buffer_reader;
+pub mod buffer;
 
 use anyhow::Result;
 use crate::buffer_reader::buf_reader::buf_reader;

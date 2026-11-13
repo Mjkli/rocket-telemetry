@@ -111,3 +111,7 @@ A producer / consumer queue. As frames coming in the buf_reader will fill a queu
 Or There is a ring buffer solution. Where we just fill up a pre-allocated buffer and parsing Data from that. Then if the buffer is full, data will start over-
 riding the biggening of the buffer. This is so that memory allocation doesnt grow.
 Or we can continue using the method now and parse an ever growing buffer and draining it with a curosr on every frame injest. (I dont think this is optimal)
+
+# 11-12-2026
+Okay going to try the ring buffer method first since i think this will be the most optimal.
+Added an initial implementation of a ring buffer. Doesnt have concurency needs yet, but it works for single thread implementations.
