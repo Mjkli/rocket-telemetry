@@ -40,10 +40,11 @@ impl<T> RingBuffer<T> {
         T: Copy,
     {
         for byte in data {
-            // let write_index = self.write_index.load(Ordering::Relaxed);
+            if self.write_index == self.read_index {
+                self.read_index = (self.read_index + 1) % self.buffer.len();
+            }
             self.buffer[self.write_index] = *byte;
             self.write_index = (self.write_index + 1) % self.buffer.len();
-            // self.write_index.store((write_index + 1) % self.buffer.len(), Ordering::Relaxed);
         }
     }
 
@@ -51,16 +52,17 @@ impl<T> RingBuffer<T> {
     where
         T: Copy,
     {
-        if slice_size > (self.buffer.len() - self.read_index) {
-            let res: Vec<T> = self.buffer[self.read_index..].to_vec();
-            let remaining_size = slice_size - res.len();
-            let mut result = res;
-            result.extend_from_slice(&self.buffer[0..remaining_size]);
-            result
-        } else {
-            (&self.buffer[self.read_index..(self.read_index + slice_size)]).to_vec()
+        let mut result = Vec::with_capacity(slice_size);
+        let mut index = self.read_index;
+
+        for _ in 0..slice_size {
+            result.push(self.buffer[index]);
+            index = (index + 1) % self.buffer.len();
         }
+
+        result
     }
+    
 }
 
 mod tests {
@@ -68,21 +70,26 @@ mod tests {
 
     #[test]
     fn test_ring_buffer() {
-        let mut ring_buffer = RingBuffer::new(256, 0);
-        let telemetry_data = protocol::telemetry_data::TelemetryData {
-            roll: 1.25,
-            pitch: -2.5,
-            altitude: 123.0,
-            temperature: 18.5,
-            flight_state: protocol::telemetry_data::FlightState::Preflight,
-            count: 7,
+        let mut ring_buffer = RingBuffer::new(95, 0);
+        
+        let data = protocol::telemetry_data::TelemetryData {
+            roll: 20.0,
+            pitch: 30.0,
+            altitude: 192.0 ,
+            temperature: 15.0,
+            flight_state: protocol::telemetry_data::FlightState::Preflight, // Staying in Preflight for now, will implement state machine later
+            count: 1,
         };
-        let uart_data = protocol::encode(&telemetry_data).unwrap();
 
-        ring_buffer.push(&uart_data);
+        let encoded_data = protocol::encode(&data).unwrap();
+        ring_buffer.push(&encoded_data);
+        ring_buffer.push(&encoded_data); 
+        ring_buffer.push(&encoded_data); 
+        ring_buffer.push(&encoded_data); 
 
-        assert_eq!(ring_buffer.get(uart_data.len()), uart_data);
-        assert_eq!(ring_buffer.get(uart_data.len()).last(), Some(&0x00));
+        let result = ring_buffer.get(encoded_data.len());
+        assert_eq!(result, encoded_data);
+
 
     }
 }

@@ -30,8 +30,7 @@ pub fn buf_reader<T>(serial_port: &str, main_tx: Sender<T>) -> Result<()> {
     loop {
         match port.read(&mut inbound) {
             Ok(n) => {
-
-
+                buffer.push(&inbound[..n]);
             }
             Err(ref e) if e.kind() == std::io::ErrorKind::TimedOut => {
                 // no data yet. keep waiting
