@@ -115,3 +115,7 @@ Or we can continue using the method now and parse an ever growing buffer and dra
 # 11-12-2026
 Okay going to try the ring buffer method first since i think this will be the most optimal.
 Added an initial implementation of a ring buffer. Doesnt have concurency needs yet, but it works for single thread implementations.
+
+# 11-13-2026
+Ring buffer setup now. Integrated it with the buffer_reader, But its still inline. So I am worried this may still be too slow. This is where concurrency comes in.
+IF I can decode properly then this will be the course i take.
