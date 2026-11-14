@@ -3,6 +3,8 @@ use serialport::SerialPort;
 use crate::parcer::parcer::PacketParser;
 use crate::buffer::buffer::RingBuffer;
 use tokio::sync::mpsc::Sender;
+use protocol::decode;
+use protocol::telemetry_data::{TelemetryData};
 
 
 pub fn buf_reader<T>(serial_port: &str, main_tx: Sender<T>) -> Result<()> {
@@ -31,6 +33,28 @@ pub fn buf_reader<T>(serial_port: &str, main_tx: Sender<T>) -> Result<()> {
         match port.read(&mut inbound) {
             Ok(n) => {
                 buffer.push(&inbound[..n]);
+
+                loop {
+                    let out = buffer.get(1);
+                    if out[0] == 0 as u8 {
+                        break;
+                    }
+                }
+
+                let possible_packet = buffer.get(38);
+                if possible_packet.len() < 38 || possible_packet[possible_packet.len() - 1] != 0 {
+                    continue;
+                }
+
+                let packet: TelemetryData = match decode::<TelemetryData>(possible_packet.as_slice()) {
+                    Ok(packet) => packet,
+                    Err(e) => {
+                        log::error!("Error decoding packet: {:?}", e);
+                        continue;
+                    }
+                };
+                println!("Decoded packet: {:?}", packet);
+
             }
             Err(ref e) if e.kind() == std::io::ErrorKind::TimedOut => {
                 // no data yet. keep waiting

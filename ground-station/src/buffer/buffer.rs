@@ -48,16 +48,19 @@ impl<T> RingBuffer<T> {
         }
     }
 
-    pub fn get(&self, slice_size: usize) -> Vec<T> 
+    pub fn get(&mut self, slice_size: usize) -> Vec<T> 
     where
         T: Copy,
     {
         let mut result = Vec::with_capacity(slice_size);
-        let mut index = self.read_index;
 
         for _ in 0..slice_size {
-            result.push(self.buffer[index]);
-            index = (index + 1) % self.buffer.len();
+            result.push(self.buffer[self.read_index]);
+            self.read_index = (self.read_index + 1) % self.buffer.len();
+            if self.read_index == self.write_index {
+                log::error!("Ring buffer is empty, returning what we have so far");
+                break;
+            }
         }
 
         result
@@ -85,7 +88,14 @@ mod tests {
         ring_buffer.push(&encoded_data);
         ring_buffer.push(&encoded_data); 
         ring_buffer.push(&encoded_data); 
-        ring_buffer.push(&encoded_data); 
+        ring_buffer.push(&encoded_data);
+        
+        loop {
+            let out = ring_buffer.get(1);
+            if out[0] == 0 as u8 {
+                break;
+            }
+        }
 
         let result = ring_buffer.get(encoded_data.len());
         assert_eq!(result, encoded_data);
