@@ -119,3 +119,9 @@ Added an initial implementation of a ring buffer. Doesnt have concurency needs y
 # 11-13-2026
 Ring buffer setup now. Integrated it with the buffer_reader, But its still inline. So I am worried this may still be too slow. This is where concurrency comes in.
 IF I can decode properly then this will be the course i take.
+
+# 11-15-2026
+Need to fix how I want to parse the packet out of the ring buffer. Since the "get" call pushing the read. If we have an incomplete
+packet, then we would miss pacekts because we push the read in the middle of the packet if we are checking. Simplifying the buffer for making parsing packets.
+Ring buffer is working now, and I am able to get packets from it. Although there is still an issue,
+of the reader getting out of sync. I just need to figure out how to keep it in sync so that i can parse the packets appropriately.
