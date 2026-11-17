@@ -1,10 +1,11 @@
 use anyhow::Result;
 use serialport::SerialPort;
 use crate::parcer::parcer::PacketParser;
-use crate::buffer::buffer::RingBuffer;
+use crate::buffer::buffer::DataRingBuffer;
 use tokio::sync::mpsc::Sender;
 use protocol::decode;
 use protocol::telemetry_data::{TelemetryData};
+use log::error;
 
 
 pub fn buf_reader<T>(serial_port: &str, main_tx: Sender<T>) -> Result<()> {
@@ -27,34 +28,34 @@ pub fn buf_reader<T>(serial_port: &str, main_tx: Sender<T>) -> Result<()> {
 
     let mut test_vec: Vec<u8> = Vec::new();
 
-    let mut buffer = RingBuffer::<u8>::new(256, 0);
+    let mut buffer = DataRingBuffer::new(256);
 
     loop {
         match port.read(&mut inbound) {
             Ok(n) => {
                 buffer.push(&inbound[..n]);
+                if inbound[..n].contains(&0) {
+                    if let Some(num) = buffer.peek() {
+                        if num == 0 {
+                            // we are on 0 here
+                            let possible_packet = buffer.get(40);
+                            let packet = match decode::<TelemetryData>(&possible_packet) {
+                                Ok(packet) => packet,
+                                Err(e) => {
+                                    error!("Error decoding packet: {:?}", e);
+                                    println!("Error decoding packet: {:?} :: {:?}", e, possible_packet);
+                                    continue;
+                                }
+                            };
 
-                loop {
-                    let out = buffer.get(1);
-                    if out[0] == 0 as u8 {
-                        break;
+                            println!("Packet :: {:?}", packet);
+                        } else {
+                            let len_to_0 = buffer.to_next_0();
+                            buffer.advance_read(len_to_0);
+                            println!("Advancing buffer");
+                        }
                     }
-                }
-
-                let possible_packet = buffer.get(38);
-                if possible_packet.len() < 38 || possible_packet[possible_packet.len() - 1] != 0 {
-                    continue;
-                }
-
-                let packet: TelemetryData = match decode::<TelemetryData>(possible_packet.as_slice()) {
-                    Ok(packet) => packet,
-                    Err(e) => {
-                        log::error!("Error decoding packet: {:?}", e);
-                        continue;
-                    }
-                };
-                println!("Decoded packet: {:?}", packet);
-
+                } 
             }
             Err(ref e) if e.kind() == std::io::ErrorKind::TimedOut => {
                 // no data yet. keep waiting
