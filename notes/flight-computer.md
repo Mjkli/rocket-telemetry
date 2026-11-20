@@ -55,4 +55,13 @@ Now I am just debugging why it is.
 Okay! figured out what was happening. Apperantly if you dont setup the proper uart settings in raspberry pis settings.
 It takes the baud rate from the clock and not from the defined rate(9600). So I had to run some commands and edit a config file. And it seemed to work.
 After fixing that. I had to debug the RF communication.
-Now I really understand how the wiring is setup. 
+Now I really understand how the wiring is setup.
+
+# 11-19-2026
+Swapped over to my WSL. To pass ardino to WSL:
+Powershell Admin:
+    usbipd list
+    usbipd bind --busid 1-1
+    usbipd attach --wsl --busid 1-1
+WSL:
+    lsusb

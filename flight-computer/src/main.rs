@@ -248,8 +248,6 @@ fn main() {
             log::error!("UART TX FIFO did not drain in time: {:?}", e);
         }
 
-        log::info!("Sending Telemetry Data: {:02X?}", encoded_data);
-
         FreeRtos::delay_ms(TIME_RATE);
     }
 }

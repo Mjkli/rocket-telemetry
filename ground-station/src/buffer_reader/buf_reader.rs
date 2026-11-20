@@ -1,6 +1,5 @@
 use anyhow::Result;
 use serialport::SerialPort;
-use crate::parcer::parcer::PacketParser;
 use crate::buffer::buffer::DataRingBuffer;
 use tokio::sync::mpsc::Sender;
 use protocol::decode;
@@ -18,44 +17,19 @@ pub fn buf_reader<T>(serial_port: &str, main_tx: Sender<T>) -> Result<()> {
         .open()?;
 
 
-    let mut inbound = [0u8; 256];
-    let mut parser = PacketParser::new();
-    let mut loop_speed = 5;
-
-    let mut count: Option<u16> = None;
-    let mut caught: u64 = 0;
-    let mut missed: u64 = 0;
-
-    let mut test_vec: Vec<u8> = Vec::new();
-
+    let mut inbound = [0u8; 39];
     let mut buffer = DataRingBuffer::new(256);
 
     loop {
         match port.read(&mut inbound) {
             Ok(n) => {
                 buffer.push(&inbound[..n]);
-                if inbound[..n].contains(&0) {
-                    if let Some(num) = buffer.peek() {
-                        if num == 0 {
-                            // we are on 0 here
-                            let possible_packet = buffer.get(40);
-                            let packet = match decode::<TelemetryData>(&possible_packet) {
-                                Ok(packet) => packet,
-                                Err(e) => {
-                                    error!("Error decoding packet: {:?}", e);
-                                    println!("Error decoding packet: {:?} :: {:?}", e, possible_packet);
-                                    continue;
-                                }
-                            };
-
-                            println!("Packet :: {:?}", packet);
-                        } else {
-                            let len_to_0 = buffer.to_next_0();
-                            buffer.advance_read(len_to_0);
-                            println!("Advancing buffer");
-                        }
+                while let Some(frame) = buffer.pop_frame() {
+                    match decode::<TelemetryData>(&frame) {
+                        Ok(packet) => println!("Packet :: {:?}", packet),
+                        Err(e) => eprintln!("Error decoding packet: {e:?}")
                     }
-                } 
+                }
             }
             Err(ref e) if e.kind() == std::io::ErrorKind::TimedOut => {
                 // no data yet. keep waiting

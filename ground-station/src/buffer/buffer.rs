@@ -43,50 +43,10 @@ impl DataRingBuffer {
         }
     }
 
-    pub fn get(&self, length: usize) -> Vec<u8> {
-        let mut result = Vec::new();
-        let mut index = self.read_index;
-
-        for _ in 0..length {
-            if let Some(byte) = self.buffer[index] {
-                result.push(byte);
-            } else {
-                break;
-            }
-            index = (index + 1) % self.buffer.len();
-        }
-
-        result
+    pub fn pop_frame(&mut self) -> Vec<u8> {
+        
     }
 
-    pub fn to_next_0(&mut self) -> u8 {
-        let mut index = self.read_index;
-        let mut count = 0;
-        while index != self.write_index {
-            if self.buffer[index].is_none() {
-                break;
-            }
-            if let Some(byte) = self.buffer[index] {
-                if byte == 0 {
-                    return count;
-                }
-            }
-            index = (index + 1) % self.buffer.len();
-            count += 1;
-        }
-
-        count
-    } 
-
-    pub fn peek(&self) -> Option<u8> {
-        self.buffer[self.read_index]
-    }
-
-    pub fn advance_read(&mut self, length: u8) {
-        for _ in 0..length {
-            self.read_index = (self.read_index + 1) % self.buffer.len();
-        }
-    }
 
 }
 

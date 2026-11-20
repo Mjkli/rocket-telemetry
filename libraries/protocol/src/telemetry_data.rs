@@ -1,5 +1,8 @@
 use serde::{Serialize, Deserialize};
 
+
+pub const TELEMETRY_DATA_SIZE = 38;
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct TelemetryData {
     pub roll: f64,

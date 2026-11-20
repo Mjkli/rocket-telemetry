@@ -1,4 +1,3 @@
-pub mod parcer;
 pub mod buffer_reader;
 pub mod buffer;
 
